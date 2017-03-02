@@ -2321,7 +2321,8 @@ textAngular.directive("textAngular", [
 					'contentEditable': 'true',
 					'ta-bind': 'ta-bind',
 					'ng-model': 'html',
-					'ng-model-options': element.attr('ng-model-options')
+					'ng-model-options': element.attr('ng-model-options'),
+					'aria-labelledby' : _name
 				});
 				scope.displayElements.scrollWindow.attr({'ng-hide': 'showHtml'});
 				if(attrs.taDefaultWrap) scope.displayElements.text.attr('ta-default-wrap', attrs.taDefaultWrap);
