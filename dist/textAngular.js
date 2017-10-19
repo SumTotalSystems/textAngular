@@ -2125,6 +2125,7 @@ textAngular.directive("textAngular", [
 					'contentEditable': 'true',
 					'ta-bind': 'ta-bind',
 					'ng-model': 'html',
+					'aria-label': attrs.ariaLabel,
 					'ng-model-options': element.attr('ng-model-options')
 				});
 				scope.displayElements.scrollWindow.attr({'ng-hide': 'showHtml'});
@@ -2750,6 +2751,8 @@ textAngular.directive('textAngularToolbar', [
 					else toolElement.addClass(scope.classes.toolbarButton);
 					
 					toolElement.attr('name', toolScope.name);
+					toolElement.attr('aria-label', toolScope.name);
+					toolElement.attr('role', 'button');
 					// important to not take focus from the main text/html entry
 					toolElement.attr('ta-button', 'ta-button');
 					toolElement.attr('ng-disabled', 'isDisabled()');
@@ -2887,4 +2890,30 @@ textAngular.directive('textAngularToolbar', [
 			}
 		};
 	}
-]);})();
+]);
+textAngular.controller('InsertTableModalInstanceController', ['$scope', '$modal', function ($scope, $modal) {
+    
+        // Gets converted by createTable
+        $scope.newTable = {};
+        
+        $scope.newTable.row = '';
+        $scope.newTable.col = '';
+        $scope.htmlTable = '';
+        
+        $scope.createTable = function (tableParams) {
+            if(angular.isNumber(tableParams.row) && angular.isNumber(tableParams.col) && tableParams.row > 0 && tableParams.col > 0) {
+                var table = "<p><br/></p><p><br/></p><div class='TableBorder'><table class='table table-hover table-bordered freeTextTable'>";
+                var colWidth = 100/tableParams.col;
+                for (var idxRow = 0; idxRow < tableParams.row; idxRow++) {
+                    var row = "<tr>";
+                    for (var idxCol = 0; idxCol < tableParams.col; idxCol++) {
+                        row += "<td" + (idxRow === 0 ? ' style="width: ' + colWidth + '%;"' : '') + ">&nbsp;</td>";
+                    }
+                    table += row + "</tr>";
+                }
+                $scope.htmlTable = table + "</table></div><p><br/></p><p><br/></p>";
+                alert("created table - " + $scope.htmlTable);
+                return $scope.htmlTable;
+            }
+        };    
+      }]);})();

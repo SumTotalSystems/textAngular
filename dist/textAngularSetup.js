@@ -14,7 +14,7 @@ angular.module('textAngularSetup', [])
 		['h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'p', 'pre', 'quote'],
 		['bold', 'italics', 'underline', 'strikeThrough', 'ul', 'ol', 'redo', 'undo', 'clear'],
 		['justifyLeft','justifyCenter','justifyRight','indent','outdent'],
-		['html', 'insertImage', 'insertLink', 'insertVideo', 'wordcount', 'charcount']
+		['html', 'insertImage', 'insertTable', 'insertLink', 'insertVideo', 'wordcount', 'charcount']
 	],
 	classes: {
 		focussed: "focussed",
@@ -35,6 +35,10 @@ angular.module('textAngularSetup', [])
 		// raw html
 		htmlEditorSetup: function($element){ /* Do some processing here */ }
 	},
+	/*showTableCreationPrompt: function showTableCreationPrompt($window) {
+		var inputValues = $window.prompt("Please enter the row and column count for the table separated by comma. For ex. 2,3", '');
+		return inputValues;
+	},*/
 	defaultFileDropHandler:
 		/* istanbul ignore next: untestable image processing */
 		function(file, insertAction){
@@ -55,7 +59,7 @@ angular.module('textAngularSetup', [])
 // This is the element selector string that is used to catch click events within a taBind, prevents the default and $emits a 'ta-element-select' event
 // these are individually used in an angular.element().find() call. What can go here depends on whether you have full jQuery loaded or just jQLite with angularjs.
 // div is only used as div.ta-insert-video caught in filter.
-.value('taSelectableElements', ['a','img'])
+.value('taSelectableElements', ['a','img', 'table'])
 
 // This is an array of objects with the following options:
 //				selector: <string> a jqLite or jQuery selector string
@@ -148,6 +152,11 @@ angular.module('textAngularSetup', [])
 	insertImage: {
 		dialogPrompt: 'Please enter an image URL to insert',
 		tooltip: 'Insert image',
+		hotkey: 'the - possibly language dependent hotkey ... for some future implementation'
+	},
+	insertTable: {
+		dialogPrompt: 'Please enter the row and column count for the table separated by comma. For ex. 2,3',
+		tooltip: 'Insert table',
 		hotkey: 'the - possibly language dependent hotkey ... for some future implementation'
 	},
 	insertVideo: {
@@ -543,6 +552,218 @@ angular.module('textAngularSetup', [])
 		editorScope.showResizeOverlay($element);
 	};
 
+	var tableOnSelectAction = function (event, $element, editorScope){
+
+		var finishEdit = function(){
+			editorScope.updateTaBindtaTextElement();
+			editorScope.hidePopover();
+		};
+
+		// event.preventDefault();
+		editorScope.displayElements.popover.css('width', '275px');
+		var container = editorScope.displayElements.popoverContainer;
+		container.empty();
+		container.append("<h1>Configure</h1>");
+		
+		var tableEditGroup = angular.element('<div class="btn-group tablePopupBtnGroup">');
+
+		var addRowButton = angular.element('<button type="button" class="btn btn-primary btn-sm btn-small" unselectable="on" tabindex="-1">&nbsp;&nbsp;Add Row&nbsp;</button>');
+		addRowButton.on('click', function(event){
+			event.preventDefault();
+			var tbody = $element;
+			var colnums = tbody.find("tr:nth-child(1)").children().length;
+			var col = "<td>&nbsp;</td>";
+			var allCols = "";
+			for (var x = 0; x < colnums; x++){
+				allCols = allCols + col;
+			}
+			var newElem = "<tr>" + allCols + "</tr>";
+
+			$(".tdSelected").parent().after(newElem);
+			$(".tdSelected").removeClass("tdSelected");
+
+			setTimeout(function() { 
+				$("table").off("click", "td");
+				setTimeout(function() { 
+					$("table").on( "click", "td", function(event) {
+						$(".tdSelected").removeClass("tdSelected");
+						$(this).addClass("tdSelected");
+					});
+				}, 200);
+			}, 200);
+
+			finishEdit();
+		});
+
+		var addColButton = angular.element('<button type="button" class="btn btn-primary btn-sm btn-small" unselectable="on" tabindex="-1">Add Column</button>');
+		addColButton.on('click', function(event){
+			event.preventDefault();
+
+			var tbody = $element;
+			var col = "<td>&nbsp;</td>";
+			console.log($(".tdSelected").index());
+			var childNum = $(".tdSelected").index() + 1;
+			tbody.find("tr").each(function(){
+				$(this).children(":nth-child("+childNum+")").after(col);
+			});
+			var colnums = tbody.find("tr:nth-child(1)").children().length;
+			tbody.find("tr:first").find("td").each(function(){
+				$(this).width(100 / colnums);
+			});
+
+			setTimeout(function() { 
+				$("table").off("click", "td");
+				setTimeout(function() { 
+					$("table").on( "click", "td", function(event) {
+						$(".tdSelected").removeClass("tdSelected");
+						$(this).addClass("tdSelected");
+					});
+				}, 200);
+			}, 200);
+
+			finishEdit();
+		});
+
+		var tableEditGroupRemoves = angular.element('<div class="btn-group tablePopupBtnGroup">');
+
+		var remRowButton = angular.element('<button type="button" class="btn btn-warning btn-sm btn-small" unselectable="on" tabindex="-1">&nbsp;&nbsp;Remove Row&nbsp;</button>');
+		remRowButton.on('click', function(event){
+			// alert("Rem Row " + $element.html());
+			event.preventDefault();
+			var tbody = $element;
+			// var lastrow = tbody.find('tr:last');
+
+			var ourRow = $(".tdSelected").closest('tr');
+			ourRow.remove();
+
+			//Error: Could not complete the operation due to error 800a025e.
+			//Fix for IE throwing the above odd error
+
+			// There is no logic on these errors as we're doing everything right. 
+			// So the only solution we found for this is "resetting" the selection API, 
+			// by moving the focus to another document (CKEDITOR.document) 
+			// and then back to the editable. Fortunately this solved the problem, 
+			// even if its a damn ugly hack.
+
+			// $(".focussed").focusout();
+
+			window.focus();
+			if (document.activeElement) {
+				document.activeElement.blur();
+			}
+			finishEdit();
+		});
+
+		var remColButton = angular.element('<button type="button" class="btn btn-warning btn-sm btn-small" unselectable="on" tabindex="-1">Remove Column</button>');
+		remColButton.on('click', function(event){
+			event.preventDefault();
+			var tbody = $element;
+			var childNum = $(".tdSelected").index() + 1;
+			tbody.find("tr").each(function(){
+				$(this).find("td:nth-child("+childNum+")").remove();
+			});
+			window.focus();
+			if (document.activeElement) {
+				document.activeElement.blur();
+			}
+
+			if (document.body.createTextRange) { // All IE but Edge
+				var range = document.body.createTextRange();
+				range.collapse();
+				range.select();
+			}
+			else {
+				document.getSelection().removeAllRanges();
+			}
+			finishEdit();
+		});
+
+		tableEditGroup.append(addRowButton);
+		tableEditGroup.append(addColButton);
+
+		tableEditGroupRemoves.append(remRowButton);
+		tableEditGroupRemoves.append(remColButton);
+		container.append(tableEditGroup);
+		container.append(tableEditGroupRemoves);
+
+		var buttonGroup = angular.element('<div class="btn-group tablePopupBtnGroup">');
+
+		var fullButton = angular.element('<button type="button" class="btn btn-default btn-sm btn-small" unselectable="on" tabindex="-1">100%</button>');
+		fullButton.on('click', function(event){
+			event.preventDefault();
+			$element.css({
+				'width': '100%',
+				'height': ''
+			});
+			finishEdit();
+		});
+
+		var halfButton = angular.element('<button type="button" class="btn btn-default btn-sm btn-small" unselectable="on" tabindex="-1">50%&nbsp;</button>');
+		halfButton.on('click', function(event){
+			event.preventDefault();
+			$element.css({
+				'width': '50%',
+				'height': ''
+			});
+			finishEdit();
+		});
+
+		var quartButton = angular.element('<button type="button" class="btn btn-default btn-sm btn-small" unselectable="on" tabindex="-1">25%&nbsp;</button>');
+		quartButton.on('click', function(event){
+			event.preventDefault();
+			$element.css({
+				'width': '25%',
+				'height': ''
+			});
+			finishEdit();
+		});
+
+		buttonGroup.append(quartButton);
+		buttonGroup.append(halfButton);
+		buttonGroup.append(fullButton);
+		container.append(buttonGroup);
+
+		var deleteGroup = angular.element('<div class="btn-group tablePopupBtnGroup">');
+
+		var remove = angular.element('<button type="button" class="btn btn-danger btn-sm btn-small" unselectable="on" tabindex="-1"><i class="fa fa-trash-o"></i></button>');
+		remove.on('click', function(event){
+			event.preventDefault();
+			$element.remove();
+			finishEdit();
+		});
+		deleteGroup.append(remove);
+		container.append(deleteGroup);
+
+		editorScope.showPopover($element);
+		//this was making users have to double click, so i removed the resize functionality
+		// editorScope.showResizeOverlay($element);
+	};
+
+	var createTable = function (dimensions) {
+
+		var htmlTable = null;
+
+		if(dimensions === null || dimensions.row === undefined || dimensions.row === null || 
+			dimensions.col === undefined || dimensions.col === null)
+			return htmlTable;
+
+		if(angular.isNumber(dimensions.row) && angular.isNumber(dimensions.col) && dimensions.row > 0 && dimensions.col > 0 ) {
+
+			var table = "<p><br/></p><p><br/></p><div class='TableBorder'><table class='table table-hover table-bordered freeTextTable'>";
+			var colWidth = 100/dimensions.col;
+
+			for (var idxRow = 0; idxRow < dimensions.row; idxRow++) {
+				var rowTag = "<tr>";
+				for (var idxCol = 0; idxCol < dimensions.col; idxCol++) {
+					rowTag += "<td" + (idxRow === 0 ? ' style="width: ' + colWidth + '%;"' : '') + ">&nbsp;</td>";
+				}
+				table += rowTag + "</tr>";
+			}
+			htmlTable = table + "</table></div><p><br/></p><p><br/></p>";
+		}
+		return htmlTable;		
+	};
+
 	taRegisterTool('insertImage', {
 		iconclass: 'fa fa-picture-o',
 		tooltiptext: taTranslations.insertImage.tooltip,
@@ -558,6 +779,72 @@ angular.module('textAngularSetup', [])
 			action: imgOnSelectAction
 		}
 	});
+
+	taRegisterTool('insertTable', {
+		iconclass: "fa fa-table",
+		tooltiptext: taTranslations.insertTable.tooltip,
+		action: function(){
+
+			var textAngular = this;
+			var inputValues = $window.prompt(taTranslations.insertTable.dialogPrompt, '');
+
+			if (inputValues && typeof(inputValues) === 'string') {
+
+				// This string ideally will be comma separated. Split this string to get the row & column counts.
+				var list = inputValues.split(',');
+				if(list && list.length > 0){
+					var dimensions = {
+						row: parseInt(list[0]),
+						col: parseInt(list[1])
+					};
+					// Then create the table html and append it to the editor.
+					var html = createTable(dimensions);
+					if (html !== null){
+						textAngular.$editor().wrapSelection('insertHTML', html, true);
+					}
+				}		
+			}
+
+			/**** Use this code when overriding with window prompt with modal *****/
+			/*var result = taOptions.showTableCreationPrompt();
+
+			// The default table creation prompt is the windows prompt. This should return a string.
+			if (result && typeof(result) === 'string') {
+
+				// This string ideally will be comma separated. Split this string to get the row & column counts.
+				var list = result.split(',');
+				if(list && list.length > 0){
+					var dimensions = {
+						row: parseInt(list[0]),
+						col: parseInt(list[1])
+					};
+					// Then create the table html and append it to the editor.
+					var html = createTable(dimensions);
+					if (html !== null){
+						textAngular.$editor().wrapSelection('insertHTML', html, true);
+					}
+				}		
+			}
+			// A modal can return a promise. So handle it appropriately
+			else if (result && typeof(result) === 'object' && result.then && typeof(result.then) === 'function') {
+				// Wait until the modal is closed and we have data
+				result.then(function(data) {
+					// Then create the table html and append it to the editor.
+					var html = createTable(data);
+					if (html !== null){
+						textAngular.$editor().wrapSelection('insertHTML', html, true);
+					}
+				});
+			}*/
+						
+			return false;
+		},
+		onElementSelect: {
+			element: 'table',
+			action: tableOnSelectAction
+		}
+	});
+	
 	taRegisterTool('insertVideo', {
 		iconclass: 'fa fa-youtube-play',
 		tooltiptext: taTranslations.insertVideo.tooltip,

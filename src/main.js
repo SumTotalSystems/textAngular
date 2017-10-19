@@ -312,6 +312,7 @@ textAngular.directive("textAngular", [
 					'contentEditable': 'true',
 					'ta-bind': 'ta-bind',
 					'ng-model': 'html',
+					'aria-label': attrs.ariaLabel,
 					'ng-model-options': element.attr('ng-model-options')
 				});
 				scope.displayElements.scrollWindow.attr({'ng-hide': 'showHtml'});
@@ -937,6 +938,8 @@ textAngular.directive('textAngularToolbar', [
 					else toolElement.addClass(scope.classes.toolbarButton);
 					
 					toolElement.attr('name', toolScope.name);
+					toolElement.attr('aria-label', toolScope.name);
+					toolElement.attr('role', 'button');
 					// important to not take focus from the main text/html entry
 					toolElement.attr('ta-button', 'ta-button');
 					toolElement.attr('ng-disabled', 'isDisabled()');
