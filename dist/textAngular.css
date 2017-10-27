@@ -210,10 +210,6 @@ See README.md or https://github.com/fraywing/textAngular/wiki for requirements a
     border: solid 1px #333;
 }
 
-.tableModalForm{
-    margin: 10px 10px 10px 10px;
-    width: 20%;
-}
 .remRowFreeTextTable{
     margin-left: 50px;
 }
