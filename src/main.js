@@ -307,8 +307,9 @@ textAngular.directive("textAngular", [
 					'ng-model': 'html',
 					'ng-model-options': element.attr('ng-model-options')
 				});
+				textAngularManager.editorId = 'taTextElement' + _serial;
 				scope.displayElements.text.attr({
-					'id': 'taTextElement' + _serial,
+					'id': textAngularManager.editorId,
 					'contentEditable': 'true',
 					'ta-bind': 'ta-bind',
 					'ng-model': 'html',
@@ -414,19 +415,24 @@ textAngular.directive("textAngular", [
 				scope.displayElements.html.on('focus', _focusin);
 				scope.displayElements.text.on('focus', _focusin);
 				_focusout = function(e){
-					// if we are NOT runnig an action and have NOT focussed again on the text etc then fire the blur events
-					if(!scope._actionRunning && $document[0].activeElement !== scope.displayElements.html[0] && $document[0].activeElement !== scope.displayElements.text[0]){
-						element.removeClass(scope.classes.focussed);
-						_toolbars.unfocus();
-						// to prevent multiple apply error defer to next seems to work.
-						$timeout(function(){
-							scope._bUpdateSelectedStyles = false;
-							element.triggerHandler('blur');
-							scope.focussed = false;
-						}, 0);
-					}
-					e.preventDefault();
-					return false;
+					// Adding a little timeout here so that the toolbarFocussed flag is properly marked
+					$timeout(function(){
+						if(!textAngularManager.toolbarFocussed) {
+							// if we are NOT runnig an action and have NOT focussed again on the text etc then fire the blur events
+							if(!scope._actionRunning && $document[0].activeElement !== scope.displayElements.html[0] && $document[0].activeElement !== scope.displayElements.text[0]){
+								element.removeClass(scope.classes.focussed);
+								_toolbars.unfocus();
+								// to prevent multiple apply error defer to next seems to work.
+								$timeout(function(){
+									scope._bUpdateSelectedStyles = false;
+									element.triggerHandler('blur');
+									scope.focussed = false;
+								}, 0);
+							}
+						}
+						e.preventDefault();
+						return false;
+					}, 500);				
 				};
 				scope.displayElements.html.on('blur', _focusout);
 				scope.displayElements.text.on('blur', _focusout);
@@ -583,7 +589,7 @@ textAngular.directive("textAngular", [
 					if(scope._bUpdateSelectedStyles) _updateSelectedStylesTimeout = $timeout(scope.updateSelectedStyles, 200);
 				};
 				// start updating on keydown
-				_keydown = function(){
+				_keydown = function(event){
 					/* istanbul ignore next: ie catch */
 					if(!scope.focussed){
 						scope._bUpdateSelectedStyles = false;
@@ -595,6 +601,17 @@ textAngular.directive("textAngular", [
 						scope.$apply(function(){
 							scope.updateSelectedStyles();
 						});
+					}
+
+					textAngularManager.toolbarFocussed = false;
+					
+					// When Alt+F10 is hit on the editor, the focus should shift to the toolbar
+					if(event.altKey && event.keyCode === 121) {
+						// Get the very first button displayed on the toolbar and focus on it.
+						// The _toolbar's childNodes are the button groups. The button gorups childNodes will be the actual buttons.
+						if(_toolbar[0] !== null && _toolbar[0].childNodes[0] !== null && _toolbar[0].childNodes[0].childNodes[0] !== null)
+							_toolbar[0].childNodes[0].childNodes[0].focus();
+						textAngularManager.toolbarFocussed = true;
 					}
 				};
 				scope.displayElements.html.on('keydown', _keydown);
@@ -629,6 +646,7 @@ textAngular.directive("textAngular", [
 					scope.$apply(function(){
 						scope.updateSelectedStyles();
 					});
+					textAngularManager.toolbarFocussed = false;
 				};
 				scope.displayElements.html.on('mouseup', _mouseup);
 				scope.displayElements.text.on('mouseup', _mouseup);
@@ -640,7 +658,7 @@ textAngular.service('textAngularManager', ['taToolExecuteAction', 'taTools', 'ta
 	// this service is used to manage all textAngular editors and toolbars.
 	// All publicly published functions that modify/need to access the toolbar or editor scopes should be in here
 	// these contain references to all the editors and toolbars that have been initialised in this app
-	var toolbars = {}, editors = {};
+	var toolbars = {}, editors = {}, toolbarFocussed = false;
 	// when we focus into a toolbar, we need to set the TOOLBAR's $parent to be the toolbars it's linked to.
 	// We also need to set the tools to be updated to be the toolbars...
 	return {
@@ -943,7 +961,7 @@ textAngular.directive('textAngularToolbar', [
 					// important to not take focus from the main text/html entry
 					toolElement.attr('ta-button', 'ta-button');
 					toolElement.attr('ng-disabled', 'isDisabled()');
-					toolElement.attr('tabindex', '-1');
+					toolElement.attr('tabindex', '{{ tabbingAllowed() ? 0 : -1}}');
 					toolElement.attr('ng-click', 'executeAction()');
 					toolElement.attr('ng-class', 'displayActiveToolClass(active)');
 
@@ -998,6 +1016,9 @@ textAngular.directive('textAngularToolbar', [
 							// if the current editor is disabled
 							this.$editor().disabled
 						);
+					},
+					tabbingAllowed: function(){
+						return textAngularManager.toolbarFocussed;
 					},
 					displayActiveToolClass: function(active){
 						return (active)? scope.classes.toolbarButtonActive : '';
@@ -1074,6 +1095,19 @@ textAngular.directive('textAngularToolbar', [
 				scope.$on('$destroy', function(){
 					textAngularManager.unregisterToolbar(scope.name);
 				});
+
+				var _keydown = function(event){
+					// Mark the toolbarFocussed flag as false on any keystroke except tab
+					if(event.keyCode !== 9)
+						textAngularManager.toolbarFocussed = false;
+					// When escape is hit on the toolbar, return focus to the editor section
+					if(event.keyCode === 27) {
+						var editor = $('#' + textAngularManager.editorId);
+						if(editor !== null && editor !== undefined)
+							editor.focus();
+					}
+				};
+				scope._$element.on('keydown', _keydown);
 			}
 		};
 	}
