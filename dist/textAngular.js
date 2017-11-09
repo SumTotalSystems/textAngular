@@ -2228,8 +2228,8 @@ textAngular.directive("textAngular", [
 				scope.displayElements.html.on('focus', _focusin);
 				scope.displayElements.text.on('focus', _focusin);
 				_focusout = function(e){
+					// Adding a little timeout here so that the toolbarFocussed flag is properly marked
 					$timeout(function(){
-						console.log('focusout', textAngularManager.toolbarFocussed);
 						if(!textAngularManager.toolbarFocussed) {
 							// if we are NOT runnig an action and have NOT focussed again on the text etc then fire the blur events
 							if(!scope._actionRunning && $document[0].activeElement !== scope.displayElements.html[0] && $document[0].activeElement !== scope.displayElements.text[0]){
@@ -2909,16 +2909,43 @@ textAngular.directive('textAngularToolbar', [
 					textAngularManager.unregisterToolbar(scope.name);
 				});
 
-				var _keydown = function(event){
-					// Mark the toolbarFocussed flag as false on any keystroke except tab
-					if(event.keyCode !== 9)
-						textAngularManager.toolbarFocussed = false;
+				var _keydown = function(event){			
+
+					var buttonsList = $(':button');
+					var focussedButton = $(':focus');
+					
 					// When escape is hit on the toolbar, return focus to the editor section
 					if(event.keyCode === 27) {
 						var editor = $('#' + textAngularManager.editorId);
 						if(editor !== null && editor !== undefined)
 							editor.focus();
 					}
+
+					// Left Arrow
+					else if(event.keyCode === 37) {
+						event.preventDefault();
+						var prevButton = buttonsList.get(buttonsList.index(focussedButton) - 1);
+						if (prevButton) {
+							prevButton.focus();
+						}
+					}
+
+					// Right Arrow
+					else if(event.keyCode === 39) {
+						event.preventDefault();
+						var nextButton = buttonsList.get(buttonsList.index(focussedButton) + 1);
+						if (nextButton) {
+							nextButton.focus();
+						}
+						else {
+							buttonsList[0].focus();
+						}
+					}
+
+					// Mark the toolbarFocussed flag as false on any other keystroke except tab
+					else if(event.keyCode !== 9)
+						textAngularManager.toolbarFocussed = false;
+
 				};
 				scope._$element.on('keydown', _keydown);
 			}

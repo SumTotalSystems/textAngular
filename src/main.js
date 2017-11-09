@@ -1097,15 +1097,44 @@ textAngular.directive('textAngularToolbar', [
 				});
 
 				var _keydown = function(event){
-					// Mark the toolbarFocussed flag as false on any keystroke except tab
-					if(event.keyCode !== 9)
-						textAngularManager.toolbarFocussed = false;
+
+					var buttonsList = $(':button');
+					var focussedButton = $(':focus');
+					
 					// When escape is hit on the toolbar, return focus to the editor section
 					if(event.keyCode === 27) {
 						var editor = $('#' + textAngularManager.editorId);
 						if(editor !== null && editor !== undefined)
 							editor.focus();
 					}
+
+					// Left Arrow
+					else if(event.keyCode === 37) {
+						event.preventDefault();
+						// Get the previous button and focus on it
+						var prevButton = buttonsList.get(buttonsList.index(focussedButton) - 1);
+						if (prevButton) {
+							prevButton.focus();
+						}
+					}
+
+					// Right Arrow
+					else if(event.keyCode === 39) {
+						event.preventDefault();
+						// Get the next button and focus on it. if this is last, then jump to the first button again
+						var nextButton = buttonsList.get(buttonsList.index(focussedButton) + 1);
+						if (nextButton) {
+							nextButton.focus();
+						}
+						else {
+							buttonsList[0].focus();
+						}
+					}
+
+					// Mark the toolbarFocussed flag as false on any other keystroke except tab
+					else if(event.keyCode !== 9)
+						textAngularManager.toolbarFocussed = false;
+
 				};
 				scope._$element.on('keydown', _keydown);
 			}
