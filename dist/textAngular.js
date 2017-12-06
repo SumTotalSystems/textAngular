@@ -2126,7 +2126,7 @@ textAngular.directive("textAngular", [
 					'contentEditable': 'true',
 					'ta-bind': 'ta-bind',
 					'ng-model': 'html',
-					'aria-label': attrs.ariaLabel,
+					'aria-label': attrs.textAngularLabel,
 					'ng-model-options': element.attr('ng-model-options')
 				});
 				scope.displayElements.scrollWindow.attr({'ng-hide': 'showHtml'});
@@ -2909,7 +2909,7 @@ textAngular.directive('textAngularToolbar', [
 					textAngularManager.unregisterToolbar(scope.name);
 				});
 
-				var _keydown = function(event){			
+				var _keydown = function(event){
 
 					var buttonsList = $(':button');
 					var focussedButton = $(':focus');
@@ -2924,6 +2924,7 @@ textAngular.directive('textAngularToolbar', [
 					// Left Arrow
 					else if(event.keyCode === 37) {
 						event.preventDefault();
+						// Get the previous button and focus on it
 						var prevButton = buttonsList.get(buttonsList.index(focussedButton) - 1);
 						if (prevButton) {
 							prevButton.focus();
@@ -2933,6 +2934,7 @@ textAngular.directive('textAngularToolbar', [
 					// Right Arrow
 					else if(event.keyCode === 39) {
 						event.preventDefault();
+						// Get the next button and focus on it. if this is last, then jump to the first button again
 						var nextButton = buttonsList.get(buttonsList.index(focussedButton) + 1);
 						if (nextButton) {
 							nextButton.focus();

@@ -313,7 +313,7 @@ textAngular.directive("textAngular", [
 					'contentEditable': 'true',
 					'ta-bind': 'ta-bind',
 					'ng-model': 'html',
-					'aria-label': attrs.ariaLabel,
+					'aria-label': attrs.textAngularLabel,
 					'ng-model-options': element.attr('ng-model-options')
 				});
 				scope.displayElements.scrollWindow.attr({'ng-hide': 'showHtml'});
