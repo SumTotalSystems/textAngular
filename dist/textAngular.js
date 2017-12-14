@@ -2121,13 +2121,20 @@ textAngular.directive("textAngular", [
 					'ng-model-options': element.attr('ng-model-options')
 				});
 				textAngularManager.editorId = 'taTextElement' + _serial;
+
+				var isRequired = false;
+				if(attrs.ngRequired)
+					isRequired = attrs.ngRequired;
+				else if(attrs.required)
+					isRequired = attrs.required;
+
 				scope.displayElements.text.attr({
 					'id': textAngularManager.editorId,
 					'contentEditable': 'true',
 					'ta-bind': 'ta-bind',
 					'ng-model': 'html',
 					'aria-label': attrs.textAngularLabel,
-					'ng-required': attrs.ngRequired ? attrs.ngRequired : false,
+					'ng-required': isRequired,
 					'ng-model-options': element.attr('ng-model-options')
 				});
 				scope.displayElements.scrollWindow.attr({'ng-hide': 'showHtml'});
