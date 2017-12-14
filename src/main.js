@@ -314,6 +314,7 @@ textAngular.directive("textAngular", [
 					'ta-bind': 'ta-bind',
 					'ng-model': 'html',
 					'aria-label': attrs.textAngularLabel,
+					'ng-required': attrs.ngRequired ? attrs.ngRequired : false,
 					'ng-model-options': element.attr('ng-model-options')
 				});
 				scope.displayElements.scrollWindow.attr({'ng-hide': 'showHtml'});
