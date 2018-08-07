@@ -103,62 +103,62 @@ angular.module('textAngularSetup', [])
 	},
 	// tooltip for heading - might be worth splitting
 	heading: {
-		tooltip: 'Heading '
+		tooltip: "{{'TEXT_ANGULAR_HEADING' | translate}}"
 	},
 	p: {
-		tooltip: 'Paragraph'
+		tooltip: "{{'TEXT_ANGULAR_PARAGRAPH' | translate}}"
 	},
 	pre: {
-		tooltip: 'Preformatted text'
+		tooltip: "{{'TEXT_ANGULAR_PREFORMATTED' | translate}}"
 	},
 	ul: {
-		tooltip: 'Unordered List'
+		tooltip: "{{'TEXT_ANGULAR_UNORDERED' | translate}}"
 	},
 	ol: {
-		tooltip: 'Ordered List'
+		tooltip: "{{'TEXT_ANGULAR_ORDERED' | translate}}"
 	},
 	quote: {
-		tooltip: 'Quote/unquote selection or paragraph'
+		tooltip: "{{'TEXT_ANGULAR_QUOTE_UNQUOTE' | translate}}"
 	},
 	undo: {
-		tooltip: 'Undo'
+		tooltip: "{{'TEXT_ANGULAR_UNDO' | translate}}"
 	},
 	redo: {
-		tooltip: 'Redo'
+		tooltip: "{{'TEXT_ANGULAR_REDO' | translate}}"
 	},
 	bold: {
-		tooltip: 'Bold'
+		tooltip: "{{'TEXT_ANGULAR_BOLD' | translate}}"
 	},
 	italic: {
-		tooltip: 'Italic'
+		tooltip: "{{'TEXT_ANGULAR_ITALIC' | translate}}"
 	},
 	underline: {
-		tooltip: 'Underline'
+		tooltip: "{{'TEXT_ANGULAR_UNDERLINE' | translate}}"
 	},
 	strikeThrough:{
-		tooltip: 'Strikethrough'
+		tooltip: "{{'TEXT_ANGULAR_STRIKETHROUGH' | translate}}"
 	},
 	justifyLeft: {
-		tooltip: 'Align text left'
+		tooltip: "{{'TEXT_ANGULAR_ALIGNTEXT_LEFT' | translate}}"
 	},
 	justifyRight: {
-		tooltip: 'Align text right'
+		tooltip: "{{'TEXT_ANGULAR_ALIGNTEXT_RIGHT' | translate}}"
 	},
 	justifyCenter: {
-		tooltip: 'Center'
+		tooltip: "{{'TEXT_ANGULAR_CENTER' | translate}}"
 	},
 	indent: {
-		tooltip: 'Increase indent'
+		tooltip: "{{'TEXT_ANGULAR_INCREASE_INDENT' | translate}}"
 	},
 	outdent: {
-		tooltip: 'Decrease indent'
+		tooltip: "{{'TEXT_ANGULAR_DECREASE_INDENT' | translate}}"
 	},
 	clear: {
-		tooltip: 'Clear formatting'
+		tooltip: "{{'TEXT_ANGULAR_CLEAR_FORMATTING' | translate}}"
 	},
 	insertImage: {
-		dialogPrompt: 'Please enter an image URL to insert',
-		tooltip: 'Insert image',
+		dialogPrompt: "{{'TEXT_ANGULAR_INSER_IMAGE_DIALOG' | translate}}",
+		tooltip: "{{'TEXT_ANGULAR_INSERT_IMAGE' | translate}}",
 		hotkey: 'the - possibly language dependent hotkey ... for some future implementation'
 	},
 	insertTable: {
@@ -167,29 +167,29 @@ angular.module('textAngularSetup', [])
 		hotkey: 'the - possibly language dependent hotkey ... for some future implementation'
 	},
 	insertVideo: {
-		tooltip: 'Insert video',
-		dialogPrompt: 'Please enter a youtube URL to embed'
+		tooltip: "{{'TEXT_ANGULAR_INSERT_VIDEO' | translate}}",
+		dialogPrompt: "{{'TEXT_ANGULAR_INSERT_VIDEO_DIALOG' | translate}}"
 	},
 	insertLink: {
-		tooltip: 'Insert / edit link',
-		dialogPrompt: "Please enter a URL to insert"
+		tooltip: "{{'TEXT_ANGULAR_INSERT_LINK' | translate}}",
+		dialogPrompt: "{{'TEXT_ANGULAR_INSERT_LINK_DIALOG' | translate}}"
 	},
 	editLink: {
 		reLinkButton: {
-			tooltip: "Relink"
+			tooltip: "{{'TEXT_ANGULAR_RELINK' | translate}}"
 		},
 		unLinkButton: {
-			tooltip: "Unlink"
+			tooltip: "{{'TEXT_ANGULAR_UNLINK' | translate}}"
 		},
 		targetToggle: {
-			buttontext: "Open in New Window"
+			buttontext: "{{'TEXT_ANGULAR_WINDOW' | translate}}"
 		}
 	},
 	wordcount: {
-		tooltip: 'Display words Count'
+		tooltip: "{{'TEXT_ANGULAR_WORDS_COUNT' | translate}}"
 	},
 		charcount: {
-		tooltip: 'Display characters Count'
+		tooltip: "{{'TEXT_ANGULAR_CHARACTERS_COUNT' | translate}}"
 	}
 })
 .run(['taRegisterTool', '$window', 'taTranslations', 'taSelection', 'taOptions', function(taRegisterTool, $window, taTranslations, taSelection, taOptions){
@@ -878,7 +878,7 @@ angular.module('textAngularSetup', [])
 		}
 	});
 	taRegisterTool('wordcount', {
-		display: '<div id="toolbarWC" style="display:block; min-width:100px;">Words: <span ng-bind="wordcount"></span></div>',
+		display: '<div id="toolbarWC" style="display:block; min-width:100px;"><span translate="TEXT_ANGULAR_WORDS"></span><span>:</span> <span ng-bind="wordcount"></span></div>',
 		disabled: true,
 		wordcount: 0,
 		activeState: function(){ // this fires on keyup
@@ -905,7 +905,7 @@ angular.module('textAngularSetup', [])
 		}
 	});
 	taRegisterTool('charcount', {
-		display: '<div id="toolbarCC" style="display:block; min-width:120px;">Characters: <span ng-bind="charcount"></span></div>',
+		display: '<div id="toolbarCC" style="display:block; min-width:120px;"><span translate="TEXT_ANGULAR_CHARACTERS"></span><span>:</span> <span ng-bind="charcount"></span></div>',
 		disabled: true,
 		charcount: 0,
 		activeState: function(){ // this fires on keyup
