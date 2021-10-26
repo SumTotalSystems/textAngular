@@ -1880,6 +1880,7 @@ textAngular.config([function(){
 }]);
 
 textAngular.run([function(){
+	window.onload = function() {
 	/* istanbul ignore next: not sure how to test this */
 	// Require Rangy and rangy savedSelection module.
 	if(!window.rangy){
@@ -1890,6 +1891,7 @@ textAngular.run([function(){
 			throw("rangy-selectionsaverestore.js is required for textAngular to work correctly.");
 		}
 	}
+	};
 }]);
 
 textAngular.directive("textAngular", [
