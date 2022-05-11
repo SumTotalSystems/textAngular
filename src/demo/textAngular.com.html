@@ -26,13 +26,9 @@
     </style>
 
     <!-- enable this section or the non-minimized section below -->
-    
-    <script src='../dist/textAngular-rangy.min.js'></script>
-    
-    <script src='../dist/textAngular-sanitize.min.js'></script>
-    
-    <script src='../dist/textAngular.min.js'></script>
-    
+    <% js.forEach(function(each){ %>
+    <script src='../<%= each %>'></script>
+    <% }); %>
     <!-- non minimized version for ease of debugging
         <script src='../dist/textAngular-rangy.min.js'></script>
         <script src='../dist/textAngular-sanitize.js'></script>
