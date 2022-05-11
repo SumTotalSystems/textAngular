@@ -63,7 +63,7 @@ function registerTextAngularTool(name, toolDefinition){
     taTools[name] = toolDefinition;
 }
 
-angular.module('textAngularSetup', [])
+angular.module('textAngularSetup', ['pascalprecht.translate'])
 .constant('taRegisterTool', registerTextAngularTool)
 .value('taTools', taTools)
 // Here we set up the global display defaults, to set your own use a angular $provider#decorator.
@@ -99,52 +99,63 @@ angular.module('textAngularSetup', [])
     // to disable them.
     //
     keyMappings : [],
-    toolbar: [
-        ['h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'p', 'pre', 'quote'],
-        ['bold', 'italics', 'underline', 'strikeThrough', 'ul', 'ol', 'redo', 'undo', 'clear'],
+	toolbar: [
+		['h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'p', 'pre', 'quote'],
+		['bold', 'italics', 'underline', 'strikeThrough', 'ul', 'ol', 'redo', 'undo', 'clear'],
         ['justifyLeft','justifyCenter','justifyRight','justifyFull','indent','outdent'],
-        ['html', 'insertImage', 'insertLink', 'insertVideo', 'wordcount', 'charcount']
-    ],
-    classes: {
-        focussed: "focussed",
-        toolbar: "btn-toolbar",
-        toolbarGroup: "btn-group",
-        toolbarButton: "btn btn-default",
-        toolbarButtonActive: "active",
-        disabled: "disabled",
-        textEditor: 'form-control',
-        htmlEditor: 'form-control'
-    },
-    defaultTagAttributes : {
-        a: {target:""}
-    },
-    setup: {
-        // wysiwyg mode
-        textEditorSetup: function($element){ /* Do some processing here */ },
-        // raw html
-        htmlEditorSetup: function($element){ /* Do some processing here */ }
-    },
-    defaultFileDropHandler:
-        /* istanbul ignore next: untestable image processing */
-        function(file, insertAction){
-            var reader = new FileReader();
-            if(file.type.substring(0, 5) === 'image'){
-                reader.onload = function() {
-                    if(reader.result !== '') insertAction('insertImage', reader.result, true);
-                };
+		['html', 'insertImage', 'insertTable', 'insertLink', 'insertVideo', 'wordcount', 'charcount']
+	],
+	classes: {
+		focussed: "focussed",
+		toolbar: "btn-toolbar",
+		toolbarGroup: "btn-group",
+		toolbarButton: "btn btn-default",
+		toolbarButtonActive: "active",
+		disabled: "disabled",
+		textEditor: 'form-control',
+		htmlEditor: 'form-control'
+	},
+	defaultTagAttributes : {
+		a: {target:""}
+	},
+	setup: {
+		// wysiwyg mode
+		textEditorSetup: function($element){ /* Do some processing here */ },
+		// raw html
+		htmlEditorSetup: function($element){ /* Do some processing here */ }
+	},
+	tableInsertPromptRequest: {
+		window: null,
+		message: ''
+	},
+	showTableCreationPrompt: function showTableCreationPrompt() {
+		var inputValues = null;
+		if(this.tableInsertPromptRequest.window !== null){
+			inputValues = this.tableInsertPromptRequest.window.prompt(this.tableInsertPromptRequest.message, '');
+		}
+		return inputValues;
+	},
+	defaultFileDropHandler:
+		/* istanbul ignore next: untestable image processing */
+		function(file, insertAction){
+			var reader = new FileReader();
+			if(file.type.substring(0, 5) === 'image'){
+				reader.onload = function() {
+					if(reader.result !== '') insertAction('insertImage', reader.result, true);
+				};
 
-                reader.readAsDataURL(file);
-                // NOTE: For async procedures return a promise and resolve it when the editor should update the model.
-                return true;
-            }
-            return false;
-        }
+				reader.readAsDataURL(file);
+				// NOTE: For async procedures return a promise and resolve it when the editor should update the model.
+				return true;
+			}
+			return false;
+		}
 })
 
 // This is the element selector string that is used to catch click events within a taBind, prevents the default and $emits a 'ta-element-select' event
 // these are individually used in an angular.element().find() call. What can go here depends on whether you have full jQuery loaded or just jQLite with angularjs.
 // div is only used as div.ta-insert-video caught in filter.
-.value('taSelectableElements', ['a','img'])
+.value('taSelectableElements', ['a','img', 'table'])
 
 // This is an array of objects with the following options:
 //				selector: <string> a jqLite or jQuery selector string
@@ -152,121 +163,126 @@ angular.module('textAngularSetup', [])
 //				renderLogic: <function(element)>
 // Both or one of selector and customAttribute must be defined.
 .value('taCustomRenderers', [
-    {
-        // Parse back out: '<div class="ta-insert-video" ta-insert-video src="' + urlLink + '" allowfullscreen="true" width="300" frameborder="0" height="250"></div>'
-        // To correct video element. For now only support youtube
-        selector: 'img',
-        customAttribute: 'ta-insert-video',
-        renderLogic: function(element){
-            var iframe = angular.element('<iframe></iframe>');
-            var attributes = element.prop("attributes");
-            // loop through element attributes and apply them on iframe
-            angular.forEach(attributes, function(attr) {
-                iframe.attr(attr.name, attr.value);
-            });
-            iframe.attr('src', iframe.attr('ta-insert-video'));
-            element.replaceWith(iframe);
-        }
-    }
+	{
+		// Parse back out: '<div class="ta-insert-video" ta-insert-video src="' + urlLink + '" allowfullscreen="true" width="300" frameborder="0" height="250"></div>'
+		// To correct video element. For now only support youtube
+		selector: 'img',
+		customAttribute: 'ta-insert-video',
+		renderLogic: function(element){
+			var iframe = angular.element('<iframe></iframe>');
+			var attributes = element.prop("attributes");
+			// loop through element attributes and apply them on iframe
+			angular.forEach(attributes, function(attr) {
+				iframe.attr(attr.name, attr.value);
+			});
+			iframe.attr('src', iframe.attr('ta-insert-video'));
+			element.replaceWith(iframe);
+		}
+	}
 ])
 
 .value('taTranslations', {
-    // moved to sub-elements
-    //toggleHTML: "Toggle HTML",
-    //insertImage: "Please enter a image URL to insert",
-    //insertLink: "Please enter a URL to insert",
-    //insertVideo: "Please enter a youtube URL to embed",
-    html: {
-        tooltip: 'Toggle html / Rich Text'
-    },
-    // tooltip for heading - might be worth splitting
-    heading: {
-        tooltip: 'Heading '
-    },
-    p: {
-        tooltip: 'Paragraph'
-    },
-    pre: {
-        tooltip: 'Preformatted text'
-    },
-    ul: {
-        tooltip: 'Unordered List'
-    },
-    ol: {
-        tooltip: 'Ordered List'
-    },
-    quote: {
-        tooltip: 'Quote/unquote selection or paragraph'
-    },
-    undo: {
-        tooltip: 'Undo'
-    },
-    redo: {
-        tooltip: 'Redo'
-    },
-    bold: {
-        tooltip: 'Bold'
-    },
-    italic: {
-        tooltip: 'Italic'
-    },
-    underline: {
-        tooltip: 'Underline'
-    },
-    strikeThrough:{
-        tooltip: 'Strikethrough'
-    },
-    justifyLeft: {
-        tooltip: 'Align text left'
-    },
-    justifyRight: {
-        tooltip: 'Align text right'
-    },
+	// moved to sub-elements
+	//toggleHTML: "Toggle HTML",
+	//insertImage: "Please enter a image URL to insert",
+	//insertLink: "Please enter a URL to insert",
+	//insertVideo: "Please enter a youtube URL to embed",
+	html: {
+		tooltip: 'Toggle html / Rich Text'
+	},
+	// tooltip for heading - might be worth splitting
+	heading: {
+		tooltip: "{{'TEXT_ANGULAR_HEADING' | translate}}"
+	},
+	p: {
+		tooltip: "{{'TEXT_ANGULAR_PARAGRAPH' | translate}}"
+	},
+	pre: {
+		tooltip: "{{'TEXT_ANGULAR_PREFORMATTED' | translate}}"
+	},
+	ul: {
+		tooltip: "{{'TEXT_ANGULAR_UNORDERED' | translate}}"
+	},
+	ol: {
+		tooltip: "{{'TEXT_ANGULAR_ORDERED' | translate}}"
+	},
+	quote: {
+		tooltip: "{{'TEXT_ANGULAR_QUOTE_UNQUOTE' | translate}}"
+	},
+	undo: {
+		tooltip: "{{'TEXT_ANGULAR_UNDO' | translate}}"
+	},
+	redo: {
+		tooltip: "{{'TEXT_ANGULAR_REDO' | translate}}"
+	},
+	bold: {
+		tooltip: "{{'TEXT_ANGULAR_BOLD' | translate}}"
+	},
+	italic: {
+		tooltip: "{{'TEXT_ANGULAR_ITALIC' | translate}}"
+	},
+	underline: {
+		tooltip: "{{'TEXT_ANGULAR_UNDERLINE' | translate}}"
+	},
+	strikeThrough:{
+		tooltip: "{{'TEXT_ANGULAR_STRIKETHROUGH' | translate}}"
+	},
+	justifyLeft: {
+		tooltip: "{{'TEXT_ANGULAR_ALIGNTEXT_LEFT' | translate}}"
+	},
+	justifyRight: {
+		tooltip: "{{'TEXT_ANGULAR_ALIGNTEXT_RIGHT' | translate}}"
+	},
     justifyFull: {
         tooltip: 'Justify text'
     },
-    justifyCenter: {
-        tooltip: 'Center'
-    },
-    indent: {
-        tooltip: 'Increase indent'
-    },
-    outdent: {
-        tooltip: 'Decrease indent'
-    },
-    clear: {
-        tooltip: 'Clear formatting'
-    },
-    insertImage: {
-        dialogPrompt: 'Please enter an image URL to insert',
-        tooltip: 'Insert image',
-        hotkey: 'the - possibly language dependent hotkey ... for some future implementation'
-    },
-    insertVideo: {
-        tooltip: 'Insert video',
-        dialogPrompt: 'Please enter a youtube URL to embed'
-    },
-    insertLink: {
-        tooltip: 'Insert / edit link',
-        dialogPrompt: "Please enter a URL to insert"
-    },
-    editLink: {
-        reLinkButton: {
-            tooltip: "Relink"
-        },
-        unLinkButton: {
-            tooltip: "Unlink"
-        },
-        targetToggle: {
-            buttontext: "Open in New Window"
-        }
-    },
-    wordcount: {
-        tooltip: 'Display words Count'
-    },
-        charcount: {
-        tooltip: 'Display characters Count'
-    }
+	justifyCenter: {
+		tooltip: "{{'TEXT_ANGULAR_CENTER' | translate}}"
+	},
+	indent: {
+		tooltip: "{{'TEXT_ANGULAR_INCREASE_INDENT' | translate}}"
+	},
+	outdent: {
+		tooltip: "{{'TEXT_ANGULAR_DECREASE_INDENT' | translate}}"
+	},
+	clear: {
+		tooltip: "{{'TEXT_ANGULAR_CLEAR_FORMATTING' | translate}}"
+	},
+	insertImage: {
+		dialogPrompt: "{{'TEXT_ANGULAR_INSER_IMAGE_DIALOG' | translate}}",
+		tooltip: "{{'TEXT_ANGULAR_INSERT_IMAGE' | translate}}",
+		hotkey: 'the - possibly language dependent hotkey ... for some future implementation'
+	},
+	insertTable: {
+		dialogPrompt: 'Please enter the row and column count for the table separated by comma. For ex. 2,3',
+		tooltip: 'Insert table',
+		hotkey: 'the - possibly language dependent hotkey ... for some future implementation'
+	},
+	insertVideo: {
+		tooltip: "{{'TEXT_ANGULAR_INSERT_VIDEO' | translate}}",
+		dialogPrompt: "{{'TEXT_ANGULAR_INSERT_VIDEO_DIALOG' | translate}}"
+	},
+	insertLink: {
+		tooltip: "{{'TEXT_ANGULAR_INSERT_LINK' | translate}}",
+		dialogPrompt: "{{'TEXT_ANGULAR_INSERT_LINK_DIALOG' | translate}}"
+	},
+	editLink: {
+		reLinkButton: {
+			tooltip: "{{'TEXT_ANGULAR_RELINK' | translate}}"
+		},
+		unLinkButton: {
+			tooltip: "{{'TEXT_ANGULAR_UNLINK' | translate}}"
+		},
+		targetToggle: {
+			buttontext: "{{'TEXT_ANGULAR_WINDOW' | translate}}"
+		}
+	},
+	wordcount: {
+		tooltip: "{{'TEXT_ANGULAR_WORDS_COUNT' | translate}}"
+	},
+		charcount: {
+		tooltip: "{{'TEXT_ANGULAR_CHARACTERS_COUNT' | translate}}"
+	}
 })
 .factory('taToolFunctions', ['$window','taTranslations', function($window, taTranslations) {
     return {
@@ -445,140 +461,140 @@ angular.module('textAngularSetup', [])
     if ((taOptions.forceTextAngularSanitize===true) && (gv.version !== 'taSanitize')) {
         throw angular.$$minErr('textAngular')("textAngularSetup", "The textAngular-sanitize provider has been replaced by another -- have you included angular-sanitize by mistake?");
     }
-    taRegisterTool("html", {
-        iconclass: 'fa fa-code',
-        tooltiptext: taTranslations.html.tooltip,
-        action: function(){
-            this.$editor().switchView();
-        },
-        activeState: function(){
-            return this.$editor().showHtml;
-        }
-    });
-    // add the Header tools
-    // convenience functions so that the loop works correctly
-    var _retActiveStateFunction = function(q){
-        return function(){ return this.$editor().queryFormatBlockState(q); };
-    };
-    var headerAction = function(){
-        return this.$editor().wrapSelection("formatBlock", "<" + this.name.toUpperCase() +">");
-    };
-    angular.forEach(['h1','h2','h3','h4','h5','h6'], function(h){
-        taRegisterTool(h.toLowerCase(), {
-            buttontext: h.toUpperCase(),
-            tooltiptext: taTranslations.heading.tooltip + h.charAt(1),
-            action: headerAction,
-            activeState: _retActiveStateFunction(h.toLowerCase())
-        });
-    });
-    taRegisterTool('p', {
-        buttontext: 'P',
-        tooltiptext: taTranslations.p.tooltip,
-        action: function(){
-            return this.$editor().wrapSelection("formatBlock", "<P>");
-        },
-        activeState: function(){ return this.$editor().queryFormatBlockState('p'); }
-    });
-    // key: pre -> taTranslations[key].tooltip, taTranslations[key].buttontext
-    taRegisterTool('pre', {
-        buttontext: 'pre',
-        tooltiptext: taTranslations.pre.tooltip,
-        action: function(){
-            return this.$editor().wrapSelection("formatBlock", "<PRE>");
-        },
-        activeState: function(){ return this.$editor().queryFormatBlockState('pre'); }
-    });
-    taRegisterTool('ul', {
-        iconclass: 'fa fa-list-ul',
-        tooltiptext: taTranslations.ul.tooltip,
-        action: function(){
-            return this.$editor().wrapSelection("insertUnorderedList", null);
-        },
-        activeState: function(){ return this.$editor().queryCommandState('insertUnorderedList'); }
-    });
-    taRegisterTool('ol', {
-        iconclass: 'fa fa-list-ol',
-        tooltiptext: taTranslations.ol.tooltip,
-        action: function(){
-            return this.$editor().wrapSelection("insertOrderedList", null);
-        },
-        activeState: function(){ return this.$editor().queryCommandState('insertOrderedList'); }
-    });
-    taRegisterTool('quote', {
-        iconclass: 'fa fa-quote-right',
-        tooltiptext: taTranslations.quote.tooltip,
-        action: function(){
-            return this.$editor().wrapSelection("formatBlock", "<BLOCKQUOTE>");
-        },
-        activeState: function(){ return this.$editor().queryFormatBlockState('blockquote'); }
-    });
-    taRegisterTool('undo', {
-        iconclass: 'fa fa-undo',
-        tooltiptext: taTranslations.undo.tooltip,
-        action: function(){
-            return this.$editor().wrapSelection("undo", null);
-        }
-    });
-    taRegisterTool('redo', {
-        iconclass: 'fa fa-repeat',
-        tooltiptext: taTranslations.redo.tooltip,
-        action: function(){
-            return this.$editor().wrapSelection("redo", null);
-        }
-    });
-    taRegisterTool('bold', {
-        iconclass: 'fa fa-bold',
-        tooltiptext: taTranslations.bold.tooltip,
-        action: function(){
-            return this.$editor().wrapSelection("bold", null);
-        },
-        activeState: function(){
-            return this.$editor().queryCommandState('bold');
-        },
-        commandKeyCode: 98
-    });
-    taRegisterTool('justifyLeft', {
-        iconclass: 'fa fa-align-left',
-        tooltiptext: taTranslations.justifyLeft.tooltip,
-        action: function(){
-            return this.$editor().wrapSelection("justifyLeft", null);
-        },
-        activeState: function(commonElement){
+	taRegisterTool("html", {
+		iconclass: 'fa fa-code',
+		tooltiptext: taTranslations.html.tooltip,
+		action: function(){
+			this.$editor().switchView();
+		},
+		activeState: function(){
+			return this.$editor().showHtml;
+		}
+	});
+	// add the Header tools
+	// convenience functions so that the loop works correctly
+	var _retActiveStateFunction = function(q){
+		return function(){ return this.$editor().queryFormatBlockState(q); };
+	};
+	var headerAction = function(){
+		return this.$editor().wrapSelection("formatBlock", "<" + this.name.toUpperCase() +">");
+	};
+	angular.forEach(['h1','h2','h3','h4','h5','h6'], function(h){
+		taRegisterTool(h.toLowerCase(), {
+			buttontext: h.toUpperCase(),
+			tooltiptext: taTranslations.heading.tooltip + h.charAt(1),
+			action: headerAction,
+			activeState: _retActiveStateFunction(h.toLowerCase())
+		});
+	});
+	taRegisterTool('p', {
+		buttontext: 'P',
+		tooltiptext: taTranslations.p.tooltip,
+		action: function(){
+			return this.$editor().wrapSelection("formatBlock", "<P>");
+		},
+		activeState: function(){ return this.$editor().queryFormatBlockState('p'); }
+	});
+	// key: pre -> taTranslations[key].tooltip, taTranslations[key].buttontext
+	taRegisterTool('pre', {
+		buttontext: 'pre',
+		tooltiptext: taTranslations.pre.tooltip,
+		action: function(){
+			return this.$editor().wrapSelection("formatBlock", "<PRE>");
+		},
+		activeState: function(){ return this.$editor().queryFormatBlockState('pre'); }
+	});
+	taRegisterTool('ul', {
+		iconclass: 'fa fa-list-ul',
+		tooltiptext: taTranslations.ul.tooltip,
+		action: function(){
+			return this.$editor().wrapSelection("insertUnorderedList", null);
+		},
+		activeState: function(){ return this.$editor().queryCommandState('insertUnorderedList'); }
+	});
+	taRegisterTool('ol', {
+		iconclass: 'fa fa-list-ol',
+		tooltiptext: taTranslations.ol.tooltip,
+		action: function(){
+			return this.$editor().wrapSelection("insertOrderedList", null);
+		},
+		activeState: function(){ return this.$editor().queryCommandState('insertOrderedList'); }
+	});
+	taRegisterTool('quote', {
+		iconclass: 'fa fa-quote-right',
+		tooltiptext: taTranslations.quote.tooltip,
+		action: function(){
+			return this.$editor().wrapSelection("formatBlock", "<BLOCKQUOTE>");
+		},
+		activeState: function(){ return this.$editor().queryFormatBlockState('blockquote'); }
+	});
+	taRegisterTool('undo', {
+		iconclass: 'fa fa-undo',
+		tooltiptext: taTranslations.undo.tooltip,
+		action: function(){
+			return this.$editor().wrapSelection("undo", null);
+		}
+	});
+	taRegisterTool('redo', {
+		iconclass: 'fa fa-repeat',
+		tooltiptext: taTranslations.redo.tooltip,
+		action: function(){
+			return this.$editor().wrapSelection("redo", null);
+		}
+	});
+	taRegisterTool('bold', {
+		iconclass: 'fa fa-bold',
+		tooltiptext: taTranslations.bold.tooltip,
+		action: function(){
+			return this.$editor().wrapSelection("bold", null);
+		},
+		activeState: function(){
+			return this.$editor().queryCommandState('bold');
+		},
+		commandKeyCode: 98
+	});
+	taRegisterTool('justifyLeft', {
+		iconclass: 'fa fa-align-left',
+		tooltiptext: taTranslations.justifyLeft.tooltip,
+		action: function(){
+			return this.$editor().wrapSelection("justifyLeft", null);
+		},
+		activeState: function(commonElement){
             /* istanbul ignore next: */
             if (commonElement && commonElement.nodeName === '#document') return false;
-            var result = false;
+			var result = false;
             if (commonElement) {
                 // commonELement.css('text-align') can throw an error 'Cannot read property 'defaultView' of null' in rare conditions
                 // so we do try catch here...
                 try {
                     result =
-                        commonElement.css('text-align') === 'left' ||
-                        commonElement.attr('align') === 'left' ||
-                        (
-                            commonElement.css('text-align') !== 'right' &&
-                            commonElement.css('text-align') !== 'center' &&
+				commonElement.css('text-align') === 'left' ||
+				commonElement.attr('align') === 'left' ||
+				(
+					commonElement.css('text-align') !== 'right' &&
+					commonElement.css('text-align') !== 'center' &&
                             commonElement.css('text-align') !== 'justify' && !this.$editor().queryCommandState('justifyRight') && !this.$editor().queryCommandState('justifyCenter')
-                        ) && !this.$editor().queryCommandState('justifyFull');
+				) && !this.$editor().queryCommandState('justifyFull');
                 } catch(e) {
                     /* istanbul ignore next: error handler */
                     //console.log(e);
                     result = false;
                 }
             }
-            result = result || this.$editor().queryCommandState('justifyLeft');
-            return result;
-        }
-    });
-    taRegisterTool('justifyRight', {
-        iconclass: 'fa fa-align-right',
-        tooltiptext: taTranslations.justifyRight.tooltip,
-        action: function(){
-            return this.$editor().wrapSelection("justifyRight", null);
-        },
-        activeState: function(commonElement){
+			result = result || this.$editor().queryCommandState('justifyLeft');
+			return result;
+		}
+	});
+	taRegisterTool('justifyRight', {
+		iconclass: 'fa fa-align-right',
+		tooltiptext: taTranslations.justifyRight.tooltip,
+		action: function(){
+			return this.$editor().wrapSelection("justifyRight", null);
+		},
+		activeState: function(commonElement){
             /* istanbul ignore next: */
             if (commonElement && commonElement.nodeName === '#document') return false;
-            var result = false;
+			var result = false;
             if(commonElement) {
                 // commonELement.css('text-align') can throw an error 'Cannot read property 'defaultView' of null' in rare conditions
                 // so we do try catch here...
@@ -590,10 +606,10 @@ angular.module('textAngularSetup', [])
                     result = false;
                 }
             }
-            result = result || this.$editor().queryCommandState('justifyRight');
-            return result;
-        }
-    });
+			result = result || this.$editor().queryCommandState('justifyRight');
+			return result;
+		}
+	});
     taRegisterTool('justifyFull', {
         iconclass: 'fa fa-align-justify',
         tooltiptext: taTranslations.justifyFull.tooltip,
@@ -617,16 +633,16 @@ angular.module('textAngularSetup', [])
             return result;
         }
     });
-    taRegisterTool('justifyCenter', {
-        iconclass: 'fa fa-align-center',
-        tooltiptext: taTranslations.justifyCenter.tooltip,
-        action: function(){
-            return this.$editor().wrapSelection("justifyCenter", null);
-        },
-        activeState: function(commonElement){
+	taRegisterTool('justifyCenter', {
+		iconclass: 'fa fa-align-center',
+		tooltiptext: taTranslations.justifyCenter.tooltip,
+		action: function(){
+			return this.$editor().wrapSelection("justifyCenter", null);
+		},
+		activeState: function(commonElement){
             /* istanbul ignore next: */
             if (commonElement && commonElement.nodeName === '#document') return false;
-            var result = false;
+			var result = false;
             if(commonElement) {
                 // commonELement.css('text-align') can throw an error 'Cannot read property 'defaultView' of null' in rare conditions
                 // so we do try catch here...
@@ -639,95 +655,95 @@ angular.module('textAngularSetup', [])
                 }
 
             }
-            result = result || this.$editor().queryCommandState('justifyCenter');
-            return result;
-        }
-    });
-    taRegisterTool('indent', {
-        iconclass: 'fa fa-indent',
-        tooltiptext: taTranslations.indent.tooltip,
-        action: function(){
-            return this.$editor().wrapSelection("indent", null);
-        },
-        activeState: function(){
-            return this.$editor().queryFormatBlockState('blockquote');
+			result = result || this.$editor().queryCommandState('justifyCenter');
+			return result;
+		}
+	});
+	taRegisterTool('indent', {
+		iconclass: 'fa fa-indent',
+		tooltiptext: taTranslations.indent.tooltip,
+		action: function(){
+			return this.$editor().wrapSelection("indent", null);
+		},
+		activeState: function(){
+			return this.$editor().queryFormatBlockState('blockquote');
         },
         commandKeyCode: 'TabKey'
-    });
-    taRegisterTool('outdent', {
-        iconclass: 'fa fa-outdent',
-        tooltiptext: taTranslations.outdent.tooltip,
-        action: function(){
-            return this.$editor().wrapSelection("outdent", null);
-        },
-        activeState: function(){
-            return false;
+	});
+	taRegisterTool('outdent', {
+		iconclass: 'fa fa-outdent',
+		tooltiptext: taTranslations.outdent.tooltip,
+		action: function(){
+			return this.$editor().wrapSelection("outdent", null);
+		},
+		activeState: function(){
+			return false;
         },
         commandKeyCode: 'ShiftTabKey'
-    });
-    taRegisterTool('italics', {
-        iconclass: 'fa fa-italic',
-        tooltiptext: taTranslations.italic.tooltip,
-        action: function(){
-            return this.$editor().wrapSelection("italic", null);
-        },
-        activeState: function(){
-            return this.$editor().queryCommandState('italic');
-        },
-        commandKeyCode: 105
-    });
-    taRegisterTool('underline', {
-        iconclass: 'fa fa-underline',
-        tooltiptext: taTranslations.underline.tooltip,
-        action: function(){
-            return this.$editor().wrapSelection("underline", null);
-        },
-        activeState: function(){
-            return this.$editor().queryCommandState('underline');
-        },
-        commandKeyCode: 117
-    });
-    taRegisterTool('strikeThrough', {
-        iconclass: 'fa fa-strikethrough',
-        tooltiptext: taTranslations.strikeThrough.tooltip,
-        action: function(){
-            return this.$editor().wrapSelection("strikeThrough", null);
-        },
-        activeState: function(){
-            return document.queryCommandState('strikeThrough');
-        }
-    });
-    taRegisterTool('clear', {
-        iconclass: 'fa fa-ban',
-        tooltiptext: taTranslations.clear.tooltip,
-        action: function(deferred, restoreSelection){
+	});
+	taRegisterTool('italics', {
+		iconclass: 'fa fa-italic',
+		tooltiptext: taTranslations.italic.tooltip,
+		action: function(){
+			return this.$editor().wrapSelection("italic", null);
+		},
+		activeState: function(){
+			return this.$editor().queryCommandState('italic');
+		},
+		commandKeyCode: 105
+	});
+	taRegisterTool('underline', {
+		iconclass: 'fa fa-underline',
+		tooltiptext: taTranslations.underline.tooltip,
+		action: function(){
+			return this.$editor().wrapSelection("underline", null);
+		},
+		activeState: function(){
+			return this.$editor().queryCommandState('underline');
+		},
+		commandKeyCode: 117
+	});
+	taRegisterTool('strikeThrough', {
+		iconclass: 'fa fa-strikethrough',
+		tooltiptext: taTranslations.strikeThrough.tooltip,
+		action: function(){
+			return this.$editor().wrapSelection("strikeThrough", null);
+		},
+		activeState: function(){
+			return document.queryCommandState('strikeThrough');
+		}
+	});
+	taRegisterTool('clear', {
+		iconclass: 'fa fa-ban',
+		tooltiptext: taTranslations.clear.tooltip,
+		action: function(deferred, restoreSelection){
             var i, selectedElements, elementsSeen;
 
-            this.$editor().wrapSelection("removeFormat", null);
-            var possibleNodes = angular.element(taSelection.getSelectionElement());
+			this.$editor().wrapSelection("removeFormat", null);
+			var possibleNodes = angular.element(taSelection.getSelectionElement());
             selectedElements = taSelection.getAllSelectedElements();
             //$log.log('selectedElements:', selectedElements);
-            // remove lists
+			// remove lists
             var removeListElements = function(list, pe){
-                list = angular.element(list);
+				list = angular.element(list);
                 var prevElement = pe;
                 if (!pe) {
                     prevElement = list;
                 }
-                angular.forEach(list.children(), function(liElem){
+				angular.forEach(list.children(), function(liElem){
                     if (liElem.tagName.toLowerCase() === 'ul' ||
                         liElem.tagName.toLowerCase() === 'ol') {
                         prevElement = removeListElements(liElem, prevElement);
                     } else {
-                        var newElem = angular.element('<p></p>');
-                        newElem.html(angular.element(liElem).html());
-                        prevElement.after(newElem);
-                        prevElement = newElem;
+					var newElem = angular.element('<p></p>');
+					newElem.html(angular.element(liElem).html());
+					prevElement.after(newElem);
+					prevElement = newElem;
                     }
-                });
-                list.remove();
+				});
+				list.remove();
                 return prevElement;
-            };
+			};
 
             angular.forEach(selectedElements, function(element) {
                 if (element.nodeName.toLowerCase() === 'ul' ||
@@ -737,8 +753,8 @@ angular.module('textAngularSetup', [])
                 }
             });
 
-            angular.forEach(possibleNodes.find("ul"), removeListElements);
-            angular.forEach(possibleNodes.find("ol"), removeListElements);
+			angular.forEach(possibleNodes.find("ul"), removeListElements);
+			angular.forEach(possibleNodes.find("ol"), removeListElements);
 
             // clear out all class attributes. These do not seem to be cleared via removeFormat
             var $editor = this.$editor();
@@ -819,36 +835,36 @@ angular.module('textAngularSetup', [])
      **********************/
 
     /**********************
-     if(possibleNodes[0].tagName.toLowerCase() === 'li'){
-                var _list = possibleNodes[0].parentNode.childNodes;
-                var _preLis = [], _postLis = [], _found = false;
-                for(i = 0; i < _list.length; i++){
-                    if(_list[i] === possibleNodes[0]){
-                        _found = true;
-                    }else if(!_found) _preLis.push(_list[i]);
-                    else _postLis.push(_list[i]);
-                }
-                var _parent = angular.element(possibleNodes[0].parentNode);
-                var newElem = angular.element('<p></p>');
-                newElem.html(angular.element(possibleNodes[0]).html());
-                if(_preLis.length === 0 || _postLis.length === 0){
-                    if(_postLis.length === 0) _parent.after(newElem);
-                    else _parent[0].parentNode.insertBefore(newElem[0], _parent[0]);
+			if(possibleNodes[0].tagName.toLowerCase() === 'li'){
+				var _list = possibleNodes[0].parentNode.childNodes;
+				var _preLis = [], _postLis = [], _found = false;
+				for(i = 0; i < _list.length; i++){
+					if(_list[i] === possibleNodes[0]){
+						_found = true;
+					}else if(!_found) _preLis.push(_list[i]);
+					else _postLis.push(_list[i]);
+				}
+				var _parent = angular.element(possibleNodes[0].parentNode);
+				var newElem = angular.element('<p></p>');
+				newElem.html(angular.element(possibleNodes[0]).html());
+				if(_preLis.length === 0 || _postLis.length === 0){
+					if(_postLis.length === 0) _parent.after(newElem);
+					else _parent[0].parentNode.insertBefore(newElem[0], _parent[0]);
 
-                    if(_preLis.length === 0 && _postLis.length === 0) _parent.remove();
-                    else angular.element(possibleNodes[0]).remove();
-                }else{
-                    var _firstList = angular.element('<'+_parent[0].tagName+'></'+_parent[0].tagName+'>');
-                    var _secondList = angular.element('<'+_parent[0].tagName+'></'+_parent[0].tagName+'>');
-                    for(i = 0; i < _preLis.length; i++) _firstList.append(angular.element(_preLis[i]));
-                    for(i = 0; i < _postLis.length; i++) _secondList.append(angular.element(_postLis[i]));
-                    _parent.after(_secondList);
-                    _parent.after(newElem);
-                    _parent.after(_firstList);
-                    _parent.remove();
-                }
-                taSelection.setSelectionToElementEnd(newElem[0]);
-            }
+					if(_preLis.length === 0 && _postLis.length === 0) _parent.remove();
+					else angular.element(possibleNodes[0]).remove();
+				}else{
+					var _firstList = angular.element('<'+_parent[0].tagName+'></'+_parent[0].tagName+'>');
+					var _secondList = angular.element('<'+_parent[0].tagName+'></'+_parent[0].tagName+'>');
+					for(i = 0; i < _preLis.length; i++) _firstList.append(angular.element(_preLis[i]));
+					for(i = 0; i < _postLis.length; i++) _secondList.append(angular.element(_postLis[i]));
+					_parent.after(_secondList);
+					_parent.after(newElem);
+					_parent.after(_firstList);
+					_parent.remove();
+				}
+				taSelection.setSelectionToElementEnd(newElem[0]);
+			}
      *******************/
 
 
@@ -858,15 +874,162 @@ angular.module('textAngularSetup', [])
             return true;
         }
         return false;
-    };
+	};
 
-    taRegisterTool('insertImage', {
-        iconclass: 'fa fa-picture-o',
-        tooltiptext: taTranslations.insertImage.tooltip,
-        action: function(){
-            var imageLink;
-            imageLink = $window.prompt(taTranslations.insertImage.dialogPrompt, 'http://');
-            if(imageLink && imageLink !== '' && imageLink !== 'http://'){
+	var tableOnSelectAction = function (event, $element, editorScope){
+		var finishEdit = function(){
+			editorScope.updateTaBindtaTextElement();
+			editorScope.hidePopover();
+		};
+		
+		event.preventDefault();
+		editorScope.displayElements.popover.css('width', '275px');
+		var container = editorScope.displayElements.popoverContainer;
+		container.empty();
+		
+		var tableEditGroup = angular.element('<div class="btn-group tablePopupBtnGroup">');
+		var addRowButton = angular.element('<button type="button" class="btn btn-primary btn-sm btn-small" unselectable="on" tabindex="-1">&nbsp;&nbsp;Add Row&nbsp;</button>');
+		addRowButton.on('click', function(event){
+			event.preventDefault();
+			var tbody = $element;
+			var colnums = tbody.find("tr:nth-child(1)").children().length;
+			var col = "<td>&nbsp;</td>";
+			var allCols = "";
+			for (var x = 0; x < colnums; x++){
+				allCols = allCols + col;
+			}
+			var newElem = "<tr>" + allCols + "</tr>";
+			tbody.append(newElem);
+			finishEdit();
+		});
+		var addColButton = angular.element('<button type="button" class="btn btn-primary btn-sm btn-small" unselectable="on" tabindex="-1">Add Column</button>');
+		addColButton.on('click', function(event){
+			event.preventDefault();
+		
+			var tbody = $element;
+			var col = "<td>&nbsp;</td>";
+			tbody.find("tr").each(function(){
+				$(this).append(col);
+			});
+		
+			var colnums = tbody.find("tr:nth-child(1)").children().length;
+		
+			tbody.find("tr:first").find("td").each(function(){
+				$(this).width(100 / colnums);
+			});
+			finishEdit();
+		});
+		
+		var tableEditGroupRemoves = angular.element('<div class="btn-group tablePopupBtnGroup">');
+		
+		var remRowButton = angular.element('<button type="button" class="btn btn-warning btn-sm btn-small" unselectable="on" tabindex="-1">&nbsp;&nbsp;Remove Row&nbsp;</button>');
+		remRowButton.on('click', function(event){
+			// alert("Rem Row " + $element.html());
+			event.preventDefault();
+			var tbody = $element;
+			var lastrow = tbody.find('tr:last');
+			lastrow.remove();
+			finishEdit();
+		});
+		
+		var remColButton = angular.element('<button type="button" class="btn btn-warning btn-sm btn-small" unselectable="on" tabindex="-1">Remove Column</button>');
+		remColButton.on('click', function(event){
+			event.preventDefault();
+			var tbody = $element;
+			tbody.find("tr").each(function(){
+				$(this).find("td:last").remove();
+			});
+			finishEdit();
+		});
+		
+		tableEditGroup.append(addRowButton);
+		tableEditGroup.append(addColButton);
+		
+		tableEditGroupRemoves.append(remRowButton);
+		tableEditGroupRemoves.append(remColButton);
+		container.append(tableEditGroup);
+		container.append(tableEditGroupRemoves);
+		
+		var buttonGroup = angular.element('<div class="btn-group tablePopupBtnGroup">');
+		var fullButton = angular.element('<button type="button" class="btn btn-default btn-sm btn-small" unselectable="on" tabindex="-1">100%</button>');
+		fullButton.on('click', function(event){
+			event.preventDefault();
+			$element.css({
+				'width': '100%',
+				'height': ''
+			});
+			finishEdit();
+		});
+		var halfButton = angular.element('<button type="button" class="btn btn-default btn-sm btn-small" unselectable="on" tabindex="-1">50%&nbsp;</button>');
+		halfButton.on('click', function(event){
+			event.preventDefault();
+			$element.css({
+				'width': '50%',
+				'height': ''
+			});
+			finishEdit();
+		});
+		var quartButton = angular.element('<button type="button" class="btn btn-default btn-sm btn-small" unselectable="on" tabindex="-1">25%&nbsp;</button>');
+		quartButton.on('click', function(event){
+			event.preventDefault();
+			$element.css({
+				'width': '25%',
+				'height': ''
+			});
+			finishEdit();
+		});
+		
+		buttonGroup.append(quartButton);
+		buttonGroup.append(halfButton);
+		buttonGroup.append(fullButton);
+		container.append(buttonGroup);
+		
+		var deleteGroup = angular.element('<div class="btn-group tablePopupBtnGroup">');
+		
+		var remove = angular.element('<button type="button" class="btn btn-danger btn-sm btn-small" unselectable="on" tabindex="-1"><i class="fa fa-trash-o"></i></button>');
+		remove.on('click', function(event){
+			event.preventDefault();
+			$element.remove();
+			finishEdit();
+		});
+		deleteGroup.append(remove);
+		container.append(deleteGroup);
+		
+		editorScope.showPopover($element);
+	};
+
+	var createTable = function (dimensions) {
+
+		var htmlTable = null;
+
+		if(dimensions === null || dimensions.row === undefined || dimensions.row === null || 
+			dimensions.col === undefined || dimensions.col === null)
+			return htmlTable;
+
+		if(angular.isNumber(dimensions.row) && angular.isNumber(dimensions.col) && dimensions.row > 0 && dimensions.col > 0 ) {
+
+			var table = "<p><br/></p><p><br/></p><div class='TableBorder'><table class='table table-hover table-bordered freeTextTable'>";
+			var colWidth = 100/dimensions.col;
+
+			for (var idxRow = 0; idxRow < dimensions.row; idxRow++) {
+				var rowTag = "<tr>";
+				for (var idxCol = 0; idxCol < dimensions.col; idxCol++) {
+					rowTag += "<td" + (idxRow === 0 ? ' style="width: ' + colWidth + '%;"' : '') + ">&nbsp;</td>";
+				}
+				table += rowTag + "</tr>";
+			}
+			htmlTable = table + "</table></div><p><br/></p><p><br/></p>";
+		}
+		return htmlTable;
+	};
+
+	taRegisterTool('insertImage', {
+		iconclass: 'fa fa-picture-o',
+		tooltiptext: taTranslations.insertImage.tooltip,
+		action: function(){
+			var imageLink;
+			imageLink = $window.prompt(taTranslations.insertImage.dialogPrompt, 'http://');
+			if(imageLink && imageLink !== '' && imageLink !== 'http://'){
                 /* istanbul ignore next: don't know how to test this... since it needs a dialogPrompt */
                 // block javascript here
                 if (!blockJavascript(imageLink)) {
@@ -875,7 +1038,7 @@ angular.module('textAngularSetup', [])
                         // insertion point past the <a> element, otherwise FireFox inserts inside the <a>
                         // With this change, both FireFox and Chrome behave the same way!
                         taSelection.setSelectionAfterElement(taSelection.getSelectionElement());
-                    }
+			}
                     // In the past we used the simple statement:
                     //return this.$editor().wrapSelection('insertImage', imageLink, true);
                     //
@@ -888,33 +1051,90 @@ angular.module('textAngularSetup', [])
                     return this.$editor().wrapSelection('insertHTML', embed, true);
                 }
             }
-        },
-        onElementSelect: {
-            element: 'img',
+		},
+		onElementSelect: {
+			element: 'img',
             action: taToolFunctions.imgOnSelectAction
-        }
-    });
-    taRegisterTool('insertVideo', {
-        iconclass: 'fa fa-youtube-play',
-        tooltiptext: taTranslations.insertVideo.tooltip,
-        action: function(){
-            var urlPrompt;
-            urlPrompt = $window.prompt(taTranslations.insertVideo.dialogPrompt, 'https://');
+		}
+	});
+
+	taRegisterTool('insertTable', {
+		iconclass: "fa fa-table",
+		tooltiptext: taTranslations.insertTable.tooltip,
+		action: function(){
+
+			var textAngular = this;
+
+			// Prepare to show the windows prompt to take in the table dimensions. This will be shown if there is no modal implemented from the main application
+			if(taOptions.tableInsertPromptRequest === null) {
+				taOptions.tableInsertPromptRequest = {};
+			}
+			taOptions.tableInsertPromptRequest.window = $window;
+			taOptions.tableInsertPromptRequest.message = taTranslations.insertTable.dialogPrompt;
+
+			var result = taOptions.showTableCreationPrompt();
+			
+			// The default table creation prompt is the windows prompt. This should return a string.
+			if (result && typeof(result) === 'string') {
+
+				// This string ideally will be comma separated. Split this string to get the row & column counts.
+				var list = result.split(',');
+				if(list && list.length > 0){
+					var dimensions = {
+						row: parseInt(list[0]),
+						col: parseInt(list[1])
+					};
+					// Then create the table html and append it to the editor.
+					var html = createTable(dimensions);
+					if (html !== null){
+						textAngular.$editor().wrapSelection('insertHTML', html, true);
+					}
+				}		
+			}
+			// A modal will return a promise. So handle it appropriately
+			else if (result && typeof(result) === 'object' && result.then && typeof(result.then) === 'function') {
+				var htmlTable = null;
+				// Wait until the modal is closed and we have data
+				result.then(function(data) {
+					// Then create the table html and append it to the editor.
+					htmlTable = createTable(data);
+					if (htmlTable !== null){
+						// Inserting the html first time seems to append it outside the textAngular area. The second try works, not sure why
+						textAngular.$editor().wrapSelection('insertHTML', '', true);
+						textAngular.$editor().wrapSelection('insertHTML', htmlTable, true);
+					}
+				});
+			}
+						
+			return false;
+		},
+		onElementSelect: {
+			element: 'table',
+			action: tableOnSelectAction
+		}
+	});
+	
+	taRegisterTool('insertVideo', {
+		iconclass: 'fa fa-youtube-play',
+		tooltiptext: taTranslations.insertVideo.tooltip,
+		action: function(){
+			var urlPrompt;
+			urlPrompt = $window.prompt(taTranslations.insertVideo.dialogPrompt, 'https://');
             // block javascript here
             /* istanbul ignore else: if it's javascript don't worry - though probably should show some kind of error message */
             if (!blockJavascript(urlPrompt)) {
 
-                if (urlPrompt && urlPrompt !== '' && urlPrompt !== 'https://') {
+			if (urlPrompt && urlPrompt !== '' && urlPrompt !== 'https://') {
 
                     videoId = taToolFunctions.extractYoutubeVideoId(urlPrompt);
 
-                    /* istanbul ignore else: if it's invalid don't worry - though probably should show some kind of error message */
+				/* istanbul ignore else: if it's invalid don't worry - though probably should show some kind of error message */
                     if (videoId) {
-                        // create the embed link
+					// create the embed link
                         var urlLink = "https://www.youtube.com/embed/" + videoId;
-                        // create the HTML
-                        // for all options see: http://stackoverflow.com/questions/2068344/how-do-i-get-a-youtube-video-thumbnail-from-the-youtube-api
-                        // maxresdefault.jpg seems to be undefined on some.
+					// create the HTML
+					// for all options see: http://stackoverflow.com/questions/2068344/how-do-i-get-a-youtube-video-thumbnail-from-the-youtube-api
+					// maxresdefault.jpg seems to be undefined on some.
                         var embed = '<img class="ta-insert-video" src="https://img.youtube.com/vi/' + videoId + '/hqdefault.jpg" ta-insert-video="' + urlLink + '" contenteditable="false" allowfullscreen="true" frameborder="0" />';
                         /* istanbul ignore next: don't know how to test this... since it needs a dialogPrompt */
                         if (taSelection.getSelectionElement().tagName && taSelection.getSelectionElement().tagName.toLowerCase() === 'a') {
@@ -923,91 +1143,91 @@ angular.module('textAngularSetup', [])
                             // With this change, both FireFox and Chrome behave the same way!
                             taSelection.setSelectionAfterElement(taSelection.getSelectionElement());
                         }
-                        // insert
-                        return this.$editor().wrapSelection('insertHTML', embed, true);
-                    }
-                }
+					// insert
+					return this.$editor().wrapSelection('insertHTML', embed, true);
+				}
+			}
             }
-        },
-        onElementSelect: {
-            element: 'img',
-            onlyWithAttrs: ['ta-insert-video'],
+		},
+		onElementSelect: {
+			element: 'img',
+			onlyWithAttrs: ['ta-insert-video'],
             action: taToolFunctions.imgOnSelectAction
-        }
-    });
-    taRegisterTool('insertLink', {
-        tooltiptext: taTranslations.insertLink.tooltip,
-        iconclass: 'fa fa-link',
-        action: function(){
-            var urlLink;
+		}
+	});
+	taRegisterTool('insertLink', {
+		tooltiptext: taTranslations.insertLink.tooltip,
+		iconclass: 'fa fa-link',
+		action: function(){
+			var urlLink;
             // if this link has already been set, we need to just edit the existing link
             /* istanbul ignore if: we do not test this */
             if (taSelection.getSelectionElement().tagName && taSelection.getSelectionElement().tagName.toLowerCase() === 'a') {
                 urlLink = $window.prompt(taTranslations.insertLink.dialogPrompt, taSelection.getSelectionElement().href);
             } else {
-                urlLink = $window.prompt(taTranslations.insertLink.dialogPrompt, 'http://');
+			urlLink = $window.prompt(taTranslations.insertLink.dialogPrompt, 'http://');
             }
-            if(urlLink && urlLink !== '' && urlLink !== 'http://'){
+			if(urlLink && urlLink !== '' && urlLink !== 'http://'){
                 // block javascript here
                 /* istanbul ignore else: if it's javascript don't worry - though probably should show some kind of error message */
                 if (!blockJavascript(urlLink)) {
-                    return this.$editor().wrapSelection('createLink', urlLink, true);
-                }
+				return this.$editor().wrapSelection('createLink', urlLink, true);
+			}
             }
-        },
-        activeState: function(commonElement){
-            if(commonElement) return commonElement[0].tagName === 'A';
-            return false;
-        },
-        onElementSelect: {
-            element: 'a',
+		},
+		activeState: function(commonElement){
+			if(commonElement) return commonElement[0].tagName === 'A';
+			return false;
+		},
+		onElementSelect: {
+			element: 'a',
             action: taToolFunctions.aOnSelectAction
-        }
-    });
-    taRegisterTool('wordcount', {
-        display: '<div id="toolbarWC" style="display:block; min-width:100px;">Words: <span ng-bind="wordcount"></span></div>',
-        disabled: true,
-        wordcount: 0,
-        activeState: function(){ // this fires on keyup
-            var textElement = this.$editor().displayElements.text;
-            /* istanbul ignore next: will default to '' when undefined */
-            var workingHTML = textElement[0].innerHTML || '';
-            var noOfWords = 0;
+					}
+				});
+	taRegisterTool('wordcount', {
+		display: '<div id="toolbarWC" style="display:block; min-width:100px;"><span translate="TEXT_ANGULAR_WORDS"></span><span>:</span> <span ng-bind="wordcount"></span></div>',
+		disabled: true,
+		wordcount: 0,
+		activeState: function(){ // this fires on keyup
+			var textElement = this.$editor().displayElements.text;
+			/* istanbul ignore next: will default to '' when undefined */
+			var workingHTML = textElement[0].innerHTML || '';
+			var noOfWords = 0;
 
-            /* istanbul ignore if: will default to '' when undefined */
-            if (workingHTML.replace(/\s*<[^>]*?>\s*/g, '') !== '') {
+			/* istanbul ignore if: will default to '' when undefined */
+			if (workingHTML.replace(/\s*<[^>]*?>\s*/g, '') !== '') {
                 if (workingHTML.trim() !== '') {
-                    noOfWords = workingHTML.replace(/<\/?(b|i|em|strong|span|u|strikethrough|a|img|small|sub|sup|label)( [^>*?])?>/gi, '') // remove inline tags without adding spaces
-                        .replace(/(<[^>]*?>\s*<[^>]*?>)/ig, ' ') // replace adjacent tags with possible space between with a space
-                        .replace(/(<[^>]*?>)/ig, '') // remove any singular tags
-                        .replace(/\s+/ig, ' ') // condense spacing
-                        .match(/\S+/g).length; // count remaining non-space strings
-                }
+				noOfWords = workingHTML.replace(/<\/?(b|i|em|strong|span|u|strikethrough|a|img|small|sub|sup|label)( [^>*?])?>/gi, '') // remove inline tags without adding spaces
+										.replace(/(<[^>]*?>\s*<[^>]*?>)/ig, ' ') // replace adjacent tags with possible space between with a space
+										.replace(/(<[^>]*?>)/ig, '') // remove any singular tags
+										.replace(/\s+/ig, ' ') // condense spacing
+										.match(/\S+/g).length; // count remaining non-space strings
+			}
             }
 
-            //Set current scope
-            this.wordcount = noOfWords;
-            //Set editor scope
-            this.$editor().wordcount = noOfWords;
+			//Set current scope
+			this.wordcount = noOfWords;
+			//Set editor scope
+			this.$editor().wordcount = noOfWords;
 
-            return false;
-        }
-    });
-    taRegisterTool('charcount', {
-        display: '<div id="toolbarCC" style="display:block; min-width:120px;">Characters: <span ng-bind="charcount"></span></div>',
-        disabled: true,
-        charcount: 0,
-        activeState: function(){ // this fires on keyup
-            var textElement = this.$editor().displayElements.text;
-            var sourceText = textElement[0].innerText || textElement[0].textContent; // to cover the non-jquery use case.
+			return false;
+		}
+	});
+	taRegisterTool('charcount', {
+		display: '<div id="toolbarCC" style="display:block; min-width:120px;"><span translate="TEXT_ANGULAR_CHARACTERS"></span><span>:</span> <span ng-bind="charcount"></span></div>',
+		disabled: true,
+		charcount: 0,
+		activeState: function(){ // this fires on keyup
+			var textElement = this.$editor().displayElements.text;
+			var sourceText = textElement[0].innerText || textElement[0].textContent; // to cover the non-jquery use case.
 
-            // Caculate number of chars
-            var noOfChars = sourceText.replace(/(\r\n|\n|\r)/gm,"").replace(/^\s+/g,' ').replace(/\s+$/g, ' ').length;
-            //Set current scope
-            this.charcount = noOfChars;
-            //Set editor scope
-            this.$editor().charcount = noOfChars;
-            return false;
-        }
-    });
+			// Caculate number of chars
+			var noOfChars = sourceText.replace(/(\r\n|\n|\r)/gm,"").replace(/^\s+/g,' ').replace(/\s+$/g, ' ').length;
+			//Set current scope
+			this.charcount = noOfChars;
+			//Set editor scope
+			this.$editor().charcount = noOfChars;
+			return false;
+		}
+	});
 }]);

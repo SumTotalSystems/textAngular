@@ -4,13 +4,13 @@
     define('textAngular', ["rangy","rangy/lib/rangy-selectionsaverestore"], function (a0,b1) {
       return (root['textAngular.name'] = factory(a0,b1));
     });
-  } else if (typeof exports === 'object') {
+  } else if (typeof module === 'object' && module.exports) {
     // Node. Does not work with strict CommonJS, but
     // only CommonJS-like environments that support module.exports,
     // like Node.
     module.exports = factory(require("rangy"),require("rangy/lib/rangy-selectionsaverestore"));
   } else {
-    root['textAngular'] = factory(rangy);
+    root['textAngular'] = factory(root["rangy"]);
   }
 }(this, function (rangy) {
 
@@ -79,7 +79,7 @@ function registerTextAngularTool(name, toolDefinition){
     taTools[name] = toolDefinition;
 }
 
-angular.module('textAngularSetup', [])
+angular.module('textAngularSetup', ['pascalprecht.translate'])
 .constant('taRegisterTool', registerTextAngularTool)
 .value('taTools', taTools)
 // Here we set up the global display defaults, to set your own use a angular $provider#decorator.
@@ -115,52 +115,63 @@ angular.module('textAngularSetup', [])
     // to disable them.
     //
     keyMappings : [],
-    toolbar: [
-        ['h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'p', 'pre', 'quote'],
-        ['bold', 'italics', 'underline', 'strikeThrough', 'ul', 'ol', 'redo', 'undo', 'clear'],
+	toolbar: [
+		['h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'p', 'pre', 'quote'],
+		['bold', 'italics', 'underline', 'strikeThrough', 'ul', 'ol', 'redo', 'undo', 'clear'],
         ['justifyLeft','justifyCenter','justifyRight','justifyFull','indent','outdent'],
-        ['html', 'insertImage', 'insertLink', 'insertVideo', 'wordcount', 'charcount']
-    ],
-    classes: {
-        focussed: "focussed",
-        toolbar: "btn-toolbar",
-        toolbarGroup: "btn-group",
-        toolbarButton: "btn btn-default",
-        toolbarButtonActive: "active",
-        disabled: "disabled",
-        textEditor: 'form-control',
-        htmlEditor: 'form-control'
-    },
-    defaultTagAttributes : {
-        a: {target:""}
-    },
-    setup: {
-        // wysiwyg mode
-        textEditorSetup: function($element){ /* Do some processing here */ },
-        // raw html
-        htmlEditorSetup: function($element){ /* Do some processing here */ }
-    },
-    defaultFileDropHandler:
-        /* istanbul ignore next: untestable image processing */
-        function(file, insertAction){
-            var reader = new FileReader();
-            if(file.type.substring(0, 5) === 'image'){
-                reader.onload = function() {
-                    if(reader.result !== '') insertAction('insertImage', reader.result, true);
-                };
+		['html', 'insertImage', 'insertTable', 'insertLink', 'insertVideo', 'wordcount', 'charcount']
+	],
+	classes: {
+		focussed: "focussed",
+		toolbar: "btn-toolbar",
+		toolbarGroup: "btn-group",
+		toolbarButton: "btn btn-default",
+		toolbarButtonActive: "active",
+		disabled: "disabled",
+		textEditor: 'form-control',
+		htmlEditor: 'form-control'
+	},
+	defaultTagAttributes : {
+		a: {target:""}
+	},
+	setup: {
+		// wysiwyg mode
+		textEditorSetup: function($element){ /* Do some processing here */ },
+		// raw html
+		htmlEditorSetup: function($element){ /* Do some processing here */ }
+	},
+	tableInsertPromptRequest: {
+		window: null,
+		message: ''
+	},
+	showTableCreationPrompt: function showTableCreationPrompt() {
+		var inputValues = null;
+		if(this.tableInsertPromptRequest.window !== null){
+			inputValues = this.tableInsertPromptRequest.window.prompt(this.tableInsertPromptRequest.message, '');
+		}
+		return inputValues;
+	},
+	defaultFileDropHandler:
+		/* istanbul ignore next: untestable image processing */
+		function(file, insertAction){
+			var reader = new FileReader();
+			if(file.type.substring(0, 5) === 'image'){
+				reader.onload = function() {
+					if(reader.result !== '') insertAction('insertImage', reader.result, true);
+				};
 
-                reader.readAsDataURL(file);
-                // NOTE: For async procedures return a promise and resolve it when the editor should update the model.
-                return true;
-            }
-            return false;
-        }
+				reader.readAsDataURL(file);
+				// NOTE: For async procedures return a promise and resolve it when the editor should update the model.
+				return true;
+			}
+			return false;
+		}
 })
 
 // This is the element selector string that is used to catch click events within a taBind, prevents the default and $emits a 'ta-element-select' event
 // these are individually used in an angular.element().find() call. What can go here depends on whether you have full jQuery loaded or just jQLite with angularjs.
 // div is only used as div.ta-insert-video caught in filter.
-.value('taSelectableElements', ['a','img'])
+.value('taSelectableElements', ['a','img', 'table'])
 
 // This is an array of objects with the following options:
 //				selector: <string> a jqLite or jQuery selector string
@@ -168,121 +179,126 @@ angular.module('textAngularSetup', [])
 //				renderLogic: <function(element)>
 // Both or one of selector and customAttribute must be defined.
 .value('taCustomRenderers', [
-    {
-        // Parse back out: '<div class="ta-insert-video" ta-insert-video src="' + urlLink + '" allowfullscreen="true" width="300" frameborder="0" height="250"></div>'
-        // To correct video element. For now only support youtube
-        selector: 'img',
-        customAttribute: 'ta-insert-video',
-        renderLogic: function(element){
-            var iframe = angular.element('<iframe></iframe>');
-            var attributes = element.prop("attributes");
-            // loop through element attributes and apply them on iframe
-            angular.forEach(attributes, function(attr) {
-                iframe.attr(attr.name, attr.value);
-            });
-            iframe.attr('src', iframe.attr('ta-insert-video'));
-            element.replaceWith(iframe);
-        }
-    }
+	{
+		// Parse back out: '<div class="ta-insert-video" ta-insert-video src="' + urlLink + '" allowfullscreen="true" width="300" frameborder="0" height="250"></div>'
+		// To correct video element. For now only support youtube
+		selector: 'img',
+		customAttribute: 'ta-insert-video',
+		renderLogic: function(element){
+			var iframe = angular.element('<iframe></iframe>');
+			var attributes = element.prop("attributes");
+			// loop through element attributes and apply them on iframe
+			angular.forEach(attributes, function(attr) {
+				iframe.attr(attr.name, attr.value);
+			});
+			iframe.attr('src', iframe.attr('ta-insert-video'));
+			element.replaceWith(iframe);
+		}
+	}
 ])
 
 .value('taTranslations', {
-    // moved to sub-elements
-    //toggleHTML: "Toggle HTML",
-    //insertImage: "Please enter a image URL to insert",
-    //insertLink: "Please enter a URL to insert",
-    //insertVideo: "Please enter a youtube URL to embed",
-    html: {
-        tooltip: 'Toggle html / Rich Text'
-    },
-    // tooltip for heading - might be worth splitting
-    heading: {
-        tooltip: 'Heading '
-    },
-    p: {
-        tooltip: 'Paragraph'
-    },
-    pre: {
-        tooltip: 'Preformatted text'
-    },
-    ul: {
-        tooltip: 'Unordered List'
-    },
-    ol: {
-        tooltip: 'Ordered List'
-    },
-    quote: {
-        tooltip: 'Quote/unquote selection or paragraph'
-    },
-    undo: {
-        tooltip: 'Undo'
-    },
-    redo: {
-        tooltip: 'Redo'
-    },
-    bold: {
-        tooltip: 'Bold'
-    },
-    italic: {
-        tooltip: 'Italic'
-    },
-    underline: {
-        tooltip: 'Underline'
-    },
-    strikeThrough:{
-        tooltip: 'Strikethrough'
-    },
-    justifyLeft: {
-        tooltip: 'Align text left'
-    },
-    justifyRight: {
-        tooltip: 'Align text right'
-    },
+	// moved to sub-elements
+	//toggleHTML: "Toggle HTML",
+	//insertImage: "Please enter a image URL to insert",
+	//insertLink: "Please enter a URL to insert",
+	//insertVideo: "Please enter a youtube URL to embed",
+	html: {
+		tooltip: 'Toggle html / Rich Text'
+	},
+	// tooltip for heading - might be worth splitting
+	heading: {
+		tooltip: "{{'TEXT_ANGULAR_HEADING' | translate}}"
+	},
+	p: {
+		tooltip: "{{'TEXT_ANGULAR_PARAGRAPH' | translate}}"
+	},
+	pre: {
+		tooltip: "{{'TEXT_ANGULAR_PREFORMATTED' | translate}}"
+	},
+	ul: {
+		tooltip: "{{'TEXT_ANGULAR_UNORDERED' | translate}}"
+	},
+	ol: {
+		tooltip: "{{'TEXT_ANGULAR_ORDERED' | translate}}"
+	},
+	quote: {
+		tooltip: "{{'TEXT_ANGULAR_QUOTE_UNQUOTE' | translate}}"
+	},
+	undo: {
+		tooltip: "{{'TEXT_ANGULAR_UNDO' | translate}}"
+	},
+	redo: {
+		tooltip: "{{'TEXT_ANGULAR_REDO' | translate}}"
+	},
+	bold: {
+		tooltip: "{{'TEXT_ANGULAR_BOLD' | translate}}"
+	},
+	italic: {
+		tooltip: "{{'TEXT_ANGULAR_ITALIC' | translate}}"
+	},
+	underline: {
+		tooltip: "{{'TEXT_ANGULAR_UNDERLINE' | translate}}"
+	},
+	strikeThrough:{
+		tooltip: "{{'TEXT_ANGULAR_STRIKETHROUGH' | translate}}"
+	},
+	justifyLeft: {
+		tooltip: "{{'TEXT_ANGULAR_ALIGNTEXT_LEFT' | translate}}"
+	},
+	justifyRight: {
+		tooltip: "{{'TEXT_ANGULAR_ALIGNTEXT_RIGHT' | translate}}"
+	},
     justifyFull: {
         tooltip: 'Justify text'
     },
-    justifyCenter: {
-        tooltip: 'Center'
-    },
-    indent: {
-        tooltip: 'Increase indent'
-    },
-    outdent: {
-        tooltip: 'Decrease indent'
-    },
-    clear: {
-        tooltip: 'Clear formatting'
-    },
-    insertImage: {
-        dialogPrompt: 'Please enter an image URL to insert',
-        tooltip: 'Insert image',
-        hotkey: 'the - possibly language dependent hotkey ... for some future implementation'
-    },
-    insertVideo: {
-        tooltip: 'Insert video',
-        dialogPrompt: 'Please enter a youtube URL to embed'
-    },
-    insertLink: {
-        tooltip: 'Insert / edit link',
-        dialogPrompt: "Please enter a URL to insert"
-    },
-    editLink: {
-        reLinkButton: {
-            tooltip: "Relink"
-        },
-        unLinkButton: {
-            tooltip: "Unlink"
-        },
-        targetToggle: {
-            buttontext: "Open in New Window"
-        }
-    },
-    wordcount: {
-        tooltip: 'Display words Count'
-    },
-        charcount: {
-        tooltip: 'Display characters Count'
-    }
+	justifyCenter: {
+		tooltip: "{{'TEXT_ANGULAR_CENTER' | translate}}"
+	},
+	indent: {
+		tooltip: "{{'TEXT_ANGULAR_INCREASE_INDENT' | translate}}"
+	},
+	outdent: {
+		tooltip: "{{'TEXT_ANGULAR_DECREASE_INDENT' | translate}}"
+	},
+	clear: {
+		tooltip: "{{'TEXT_ANGULAR_CLEAR_FORMATTING' | translate}}"
+	},
+	insertImage: {
+		dialogPrompt: "{{'TEXT_ANGULAR_INSER_IMAGE_DIALOG' | translate}}",
+		tooltip: "{{'TEXT_ANGULAR_INSERT_IMAGE' | translate}}",
+		hotkey: 'the - possibly language dependent hotkey ... for some future implementation'
+	},
+	insertTable: {
+		dialogPrompt: 'Please enter the row and column count for the table separated by comma. For ex. 2,3',
+		tooltip: 'Insert table',
+		hotkey: 'the - possibly language dependent hotkey ... for some future implementation'
+	},
+	insertVideo: {
+		tooltip: "{{'TEXT_ANGULAR_INSERT_VIDEO' | translate}}",
+		dialogPrompt: "{{'TEXT_ANGULAR_INSERT_VIDEO_DIALOG' | translate}}"
+	},
+	insertLink: {
+		tooltip: "{{'TEXT_ANGULAR_INSERT_LINK' | translate}}",
+		dialogPrompt: "{{'TEXT_ANGULAR_INSERT_LINK_DIALOG' | translate}}"
+	},
+	editLink: {
+		reLinkButton: {
+			tooltip: "{{'TEXT_ANGULAR_RELINK' | translate}}"
+		},
+		unLinkButton: {
+			tooltip: "{{'TEXT_ANGULAR_UNLINK' | translate}}"
+		},
+		targetToggle: {
+			buttontext: "{{'TEXT_ANGULAR_WINDOW' | translate}}"
+		}
+	},
+	wordcount: {
+		tooltip: "{{'TEXT_ANGULAR_WORDS_COUNT' | translate}}"
+	},
+		charcount: {
+		tooltip: "{{'TEXT_ANGULAR_CHARACTERS_COUNT' | translate}}"
+	}
 })
 .factory('taToolFunctions', ['$window','taTranslations', function($window, taTranslations) {
     return {
@@ -461,140 +477,140 @@ angular.module('textAngularSetup', [])
     if ((taOptions.forceTextAngularSanitize===true) && (gv.version !== 'taSanitize')) {
         throw angular.$$minErr('textAngular')("textAngularSetup", "The textAngular-sanitize provider has been replaced by another -- have you included angular-sanitize by mistake?");
     }
-    taRegisterTool("html", {
-        iconclass: 'fa fa-code',
-        tooltiptext: taTranslations.html.tooltip,
-        action: function(){
-            this.$editor().switchView();
-        },
-        activeState: function(){
-            return this.$editor().showHtml;
-        }
-    });
-    // add the Header tools
-    // convenience functions so that the loop works correctly
-    var _retActiveStateFunction = function(q){
-        return function(){ return this.$editor().queryFormatBlockState(q); };
-    };
-    var headerAction = function(){
-        return this.$editor().wrapSelection("formatBlock", "<" + this.name.toUpperCase() +">");
-    };
-    angular.forEach(['h1','h2','h3','h4','h5','h6'], function(h){
-        taRegisterTool(h.toLowerCase(), {
-            buttontext: h.toUpperCase(),
-            tooltiptext: taTranslations.heading.tooltip + h.charAt(1),
-            action: headerAction,
-            activeState: _retActiveStateFunction(h.toLowerCase())
-        });
-    });
-    taRegisterTool('p', {
-        buttontext: 'P',
-        tooltiptext: taTranslations.p.tooltip,
-        action: function(){
-            return this.$editor().wrapSelection("formatBlock", "<P>");
-        },
-        activeState: function(){ return this.$editor().queryFormatBlockState('p'); }
-    });
-    // key: pre -> taTranslations[key].tooltip, taTranslations[key].buttontext
-    taRegisterTool('pre', {
-        buttontext: 'pre',
-        tooltiptext: taTranslations.pre.tooltip,
-        action: function(){
-            return this.$editor().wrapSelection("formatBlock", "<PRE>");
-        },
-        activeState: function(){ return this.$editor().queryFormatBlockState('pre'); }
-    });
-    taRegisterTool('ul', {
-        iconclass: 'fa fa-list-ul',
-        tooltiptext: taTranslations.ul.tooltip,
-        action: function(){
-            return this.$editor().wrapSelection("insertUnorderedList", null);
-        },
-        activeState: function(){ return this.$editor().queryCommandState('insertUnorderedList'); }
-    });
-    taRegisterTool('ol', {
-        iconclass: 'fa fa-list-ol',
-        tooltiptext: taTranslations.ol.tooltip,
-        action: function(){
-            return this.$editor().wrapSelection("insertOrderedList", null);
-        },
-        activeState: function(){ return this.$editor().queryCommandState('insertOrderedList'); }
-    });
-    taRegisterTool('quote', {
-        iconclass: 'fa fa-quote-right',
-        tooltiptext: taTranslations.quote.tooltip,
-        action: function(){
-            return this.$editor().wrapSelection("formatBlock", "<BLOCKQUOTE>");
-        },
-        activeState: function(){ return this.$editor().queryFormatBlockState('blockquote'); }
-    });
-    taRegisterTool('undo', {
-        iconclass: 'fa fa-undo',
-        tooltiptext: taTranslations.undo.tooltip,
-        action: function(){
-            return this.$editor().wrapSelection("undo", null);
-        }
-    });
-    taRegisterTool('redo', {
-        iconclass: 'fa fa-repeat',
-        tooltiptext: taTranslations.redo.tooltip,
-        action: function(){
-            return this.$editor().wrapSelection("redo", null);
-        }
-    });
-    taRegisterTool('bold', {
-        iconclass: 'fa fa-bold',
-        tooltiptext: taTranslations.bold.tooltip,
-        action: function(){
-            return this.$editor().wrapSelection("bold", null);
-        },
-        activeState: function(){
-            return this.$editor().queryCommandState('bold');
-        },
-        commandKeyCode: 98
-    });
-    taRegisterTool('justifyLeft', {
-        iconclass: 'fa fa-align-left',
-        tooltiptext: taTranslations.justifyLeft.tooltip,
-        action: function(){
-            return this.$editor().wrapSelection("justifyLeft", null);
-        },
-        activeState: function(commonElement){
+	taRegisterTool("html", {
+		iconclass: 'fa fa-code',
+		tooltiptext: taTranslations.html.tooltip,
+		action: function(){
+			this.$editor().switchView();
+		},
+		activeState: function(){
+			return this.$editor().showHtml;
+		}
+	});
+	// add the Header tools
+	// convenience functions so that the loop works correctly
+	var _retActiveStateFunction = function(q){
+		return function(){ return this.$editor().queryFormatBlockState(q); };
+	};
+	var headerAction = function(){
+		return this.$editor().wrapSelection("formatBlock", "<" + this.name.toUpperCase() +">");
+	};
+	angular.forEach(['h1','h2','h3','h4','h5','h6'], function(h){
+		taRegisterTool(h.toLowerCase(), {
+			buttontext: h.toUpperCase(),
+			tooltiptext: taTranslations.heading.tooltip + h.charAt(1),
+			action: headerAction,
+			activeState: _retActiveStateFunction(h.toLowerCase())
+		});
+	});
+	taRegisterTool('p', {
+		buttontext: 'P',
+		tooltiptext: taTranslations.p.tooltip,
+		action: function(){
+			return this.$editor().wrapSelection("formatBlock", "<P>");
+		},
+		activeState: function(){ return this.$editor().queryFormatBlockState('p'); }
+	});
+	// key: pre -> taTranslations[key].tooltip, taTranslations[key].buttontext
+	taRegisterTool('pre', {
+		buttontext: 'pre',
+		tooltiptext: taTranslations.pre.tooltip,
+		action: function(){
+			return this.$editor().wrapSelection("formatBlock", "<PRE>");
+		},
+		activeState: function(){ return this.$editor().queryFormatBlockState('pre'); }
+	});
+	taRegisterTool('ul', {
+		iconclass: 'fa fa-list-ul',
+		tooltiptext: taTranslations.ul.tooltip,
+		action: function(){
+			return this.$editor().wrapSelection("insertUnorderedList", null);
+		},
+		activeState: function(){ return this.$editor().queryCommandState('insertUnorderedList'); }
+	});
+	taRegisterTool('ol', {
+		iconclass: 'fa fa-list-ol',
+		tooltiptext: taTranslations.ol.tooltip,
+		action: function(){
+			return this.$editor().wrapSelection("insertOrderedList", null);
+		},
+		activeState: function(){ return this.$editor().queryCommandState('insertOrderedList'); }
+	});
+	taRegisterTool('quote', {
+		iconclass: 'fa fa-quote-right',
+		tooltiptext: taTranslations.quote.tooltip,
+		action: function(){
+			return this.$editor().wrapSelection("formatBlock", "<BLOCKQUOTE>");
+		},
+		activeState: function(){ return this.$editor().queryFormatBlockState('blockquote'); }
+	});
+	taRegisterTool('undo', {
+		iconclass: 'fa fa-undo',
+		tooltiptext: taTranslations.undo.tooltip,
+		action: function(){
+			return this.$editor().wrapSelection("undo", null);
+		}
+	});
+	taRegisterTool('redo', {
+		iconclass: 'fa fa-repeat',
+		tooltiptext: taTranslations.redo.tooltip,
+		action: function(){
+			return this.$editor().wrapSelection("redo", null);
+		}
+	});
+	taRegisterTool('bold', {
+		iconclass: 'fa fa-bold',
+		tooltiptext: taTranslations.bold.tooltip,
+		action: function(){
+			return this.$editor().wrapSelection("bold", null);
+		},
+		activeState: function(){
+			return this.$editor().queryCommandState('bold');
+		},
+		commandKeyCode: 98
+	});
+	taRegisterTool('justifyLeft', {
+		iconclass: 'fa fa-align-left',
+		tooltiptext: taTranslations.justifyLeft.tooltip,
+		action: function(){
+			return this.$editor().wrapSelection("justifyLeft", null);
+		},
+		activeState: function(commonElement){
             /* istanbul ignore next: */
             if (commonElement && commonElement.nodeName === '#document') return false;
-            var result = false;
+			var result = false;
             if (commonElement) {
                 // commonELement.css('text-align') can throw an error 'Cannot read property 'defaultView' of null' in rare conditions
                 // so we do try catch here...
                 try {
                     result =
-                        commonElement.css('text-align') === 'left' ||
-                        commonElement.attr('align') === 'left' ||
-                        (
-                            commonElement.css('text-align') !== 'right' &&
-                            commonElement.css('text-align') !== 'center' &&
+				commonElement.css('text-align') === 'left' ||
+				commonElement.attr('align') === 'left' ||
+				(
+					commonElement.css('text-align') !== 'right' &&
+					commonElement.css('text-align') !== 'center' &&
                             commonElement.css('text-align') !== 'justify' && !this.$editor().queryCommandState('justifyRight') && !this.$editor().queryCommandState('justifyCenter')
-                        ) && !this.$editor().queryCommandState('justifyFull');
+				) && !this.$editor().queryCommandState('justifyFull');
                 } catch(e) {
                     /* istanbul ignore next: error handler */
                     //console.log(e);
                     result = false;
                 }
             }
-            result = result || this.$editor().queryCommandState('justifyLeft');
-            return result;
-        }
-    });
-    taRegisterTool('justifyRight', {
-        iconclass: 'fa fa-align-right',
-        tooltiptext: taTranslations.justifyRight.tooltip,
-        action: function(){
-            return this.$editor().wrapSelection("justifyRight", null);
-        },
-        activeState: function(commonElement){
+			result = result || this.$editor().queryCommandState('justifyLeft');
+			return result;
+		}
+	});
+	taRegisterTool('justifyRight', {
+		iconclass: 'fa fa-align-right',
+		tooltiptext: taTranslations.justifyRight.tooltip,
+		action: function(){
+			return this.$editor().wrapSelection("justifyRight", null);
+		},
+		activeState: function(commonElement){
             /* istanbul ignore next: */
             if (commonElement && commonElement.nodeName === '#document') return false;
-            var result = false;
+			var result = false;
             if(commonElement) {
                 // commonELement.css('text-align') can throw an error 'Cannot read property 'defaultView' of null' in rare conditions
                 // so we do try catch here...
@@ -606,10 +622,10 @@ angular.module('textAngularSetup', [])
                     result = false;
                 }
             }
-            result = result || this.$editor().queryCommandState('justifyRight');
-            return result;
-        }
-    });
+			result = result || this.$editor().queryCommandState('justifyRight');
+			return result;
+		}
+	});
     taRegisterTool('justifyFull', {
         iconclass: 'fa fa-align-justify',
         tooltiptext: taTranslations.justifyFull.tooltip,
@@ -633,16 +649,16 @@ angular.module('textAngularSetup', [])
             return result;
         }
     });
-    taRegisterTool('justifyCenter', {
-        iconclass: 'fa fa-align-center',
-        tooltiptext: taTranslations.justifyCenter.tooltip,
-        action: function(){
-            return this.$editor().wrapSelection("justifyCenter", null);
-        },
-        activeState: function(commonElement){
+	taRegisterTool('justifyCenter', {
+		iconclass: 'fa fa-align-center',
+		tooltiptext: taTranslations.justifyCenter.tooltip,
+		action: function(){
+			return this.$editor().wrapSelection("justifyCenter", null);
+		},
+		activeState: function(commonElement){
             /* istanbul ignore next: */
             if (commonElement && commonElement.nodeName === '#document') return false;
-            var result = false;
+			var result = false;
             if(commonElement) {
                 // commonELement.css('text-align') can throw an error 'Cannot read property 'defaultView' of null' in rare conditions
                 // so we do try catch here...
@@ -655,95 +671,95 @@ angular.module('textAngularSetup', [])
                 }
 
             }
-            result = result || this.$editor().queryCommandState('justifyCenter');
-            return result;
-        }
-    });
-    taRegisterTool('indent', {
-        iconclass: 'fa fa-indent',
-        tooltiptext: taTranslations.indent.tooltip,
-        action: function(){
-            return this.$editor().wrapSelection("indent", null);
-        },
-        activeState: function(){
-            return this.$editor().queryFormatBlockState('blockquote');
+			result = result || this.$editor().queryCommandState('justifyCenter');
+			return result;
+		}
+	});
+	taRegisterTool('indent', {
+		iconclass: 'fa fa-indent',
+		tooltiptext: taTranslations.indent.tooltip,
+		action: function(){
+			return this.$editor().wrapSelection("indent", null);
+		},
+		activeState: function(){
+			return this.$editor().queryFormatBlockState('blockquote');
         },
         commandKeyCode: 'TabKey'
-    });
-    taRegisterTool('outdent', {
-        iconclass: 'fa fa-outdent',
-        tooltiptext: taTranslations.outdent.tooltip,
-        action: function(){
-            return this.$editor().wrapSelection("outdent", null);
-        },
-        activeState: function(){
-            return false;
+	});
+	taRegisterTool('outdent', {
+		iconclass: 'fa fa-outdent',
+		tooltiptext: taTranslations.outdent.tooltip,
+		action: function(){
+			return this.$editor().wrapSelection("outdent", null);
+		},
+		activeState: function(){
+			return false;
         },
         commandKeyCode: 'ShiftTabKey'
-    });
-    taRegisterTool('italics', {
-        iconclass: 'fa fa-italic',
-        tooltiptext: taTranslations.italic.tooltip,
-        action: function(){
-            return this.$editor().wrapSelection("italic", null);
-        },
-        activeState: function(){
-            return this.$editor().queryCommandState('italic');
-        },
-        commandKeyCode: 105
-    });
-    taRegisterTool('underline', {
-        iconclass: 'fa fa-underline',
-        tooltiptext: taTranslations.underline.tooltip,
-        action: function(){
-            return this.$editor().wrapSelection("underline", null);
-        },
-        activeState: function(){
-            return this.$editor().queryCommandState('underline');
-        },
-        commandKeyCode: 117
-    });
-    taRegisterTool('strikeThrough', {
-        iconclass: 'fa fa-strikethrough',
-        tooltiptext: taTranslations.strikeThrough.tooltip,
-        action: function(){
-            return this.$editor().wrapSelection("strikeThrough", null);
-        },
-        activeState: function(){
-            return document.queryCommandState('strikeThrough');
-        }
-    });
-    taRegisterTool('clear', {
-        iconclass: 'fa fa-ban',
-        tooltiptext: taTranslations.clear.tooltip,
-        action: function(deferred, restoreSelection){
+	});
+	taRegisterTool('italics', {
+		iconclass: 'fa fa-italic',
+		tooltiptext: taTranslations.italic.tooltip,
+		action: function(){
+			return this.$editor().wrapSelection("italic", null);
+		},
+		activeState: function(){
+			return this.$editor().queryCommandState('italic');
+		},
+		commandKeyCode: 105
+	});
+	taRegisterTool('underline', {
+		iconclass: 'fa fa-underline',
+		tooltiptext: taTranslations.underline.tooltip,
+		action: function(){
+			return this.$editor().wrapSelection("underline", null);
+		},
+		activeState: function(){
+			return this.$editor().queryCommandState('underline');
+		},
+		commandKeyCode: 117
+	});
+	taRegisterTool('strikeThrough', {
+		iconclass: 'fa fa-strikethrough',
+		tooltiptext: taTranslations.strikeThrough.tooltip,
+		action: function(){
+			return this.$editor().wrapSelection("strikeThrough", null);
+		},
+		activeState: function(){
+			return document.queryCommandState('strikeThrough');
+		}
+	});
+	taRegisterTool('clear', {
+		iconclass: 'fa fa-ban',
+		tooltiptext: taTranslations.clear.tooltip,
+		action: function(deferred, restoreSelection){
             var i, selectedElements, elementsSeen;
 
-            this.$editor().wrapSelection("removeFormat", null);
-            var possibleNodes = angular.element(taSelection.getSelectionElement());
+			this.$editor().wrapSelection("removeFormat", null);
+			var possibleNodes = angular.element(taSelection.getSelectionElement());
             selectedElements = taSelection.getAllSelectedElements();
             //$log.log('selectedElements:', selectedElements);
-            // remove lists
+			// remove lists
             var removeListElements = function(list, pe){
-                list = angular.element(list);
+				list = angular.element(list);
                 var prevElement = pe;
                 if (!pe) {
                     prevElement = list;
                 }
-                angular.forEach(list.children(), function(liElem){
+				angular.forEach(list.children(), function(liElem){
                     if (liElem.tagName.toLowerCase() === 'ul' ||
                         liElem.tagName.toLowerCase() === 'ol') {
                         prevElement = removeListElements(liElem, prevElement);
                     } else {
-                        var newElem = angular.element('<p></p>');
-                        newElem.html(angular.element(liElem).html());
-                        prevElement.after(newElem);
-                        prevElement = newElem;
+					var newElem = angular.element('<p></p>');
+					newElem.html(angular.element(liElem).html());
+					prevElement.after(newElem);
+					prevElement = newElem;
                     }
-                });
-                list.remove();
+				});
+				list.remove();
                 return prevElement;
-            };
+			};
 
             angular.forEach(selectedElements, function(element) {
                 if (element.nodeName.toLowerCase() === 'ul' ||
@@ -753,8 +769,8 @@ angular.module('textAngularSetup', [])
                 }
             });
 
-            angular.forEach(possibleNodes.find("ul"), removeListElements);
-            angular.forEach(possibleNodes.find("ol"), removeListElements);
+			angular.forEach(possibleNodes.find("ul"), removeListElements);
+			angular.forEach(possibleNodes.find("ol"), removeListElements);
 
             // clear out all class attributes. These do not seem to be cleared via removeFormat
             var $editor = this.$editor();
@@ -835,36 +851,36 @@ angular.module('textAngularSetup', [])
      **********************/
 
     /**********************
-     if(possibleNodes[0].tagName.toLowerCase() === 'li'){
-                var _list = possibleNodes[0].parentNode.childNodes;
-                var _preLis = [], _postLis = [], _found = false;
-                for(i = 0; i < _list.length; i++){
-                    if(_list[i] === possibleNodes[0]){
-                        _found = true;
-                    }else if(!_found) _preLis.push(_list[i]);
-                    else _postLis.push(_list[i]);
-                }
-                var _parent = angular.element(possibleNodes[0].parentNode);
-                var newElem = angular.element('<p></p>');
-                newElem.html(angular.element(possibleNodes[0]).html());
-                if(_preLis.length === 0 || _postLis.length === 0){
-                    if(_postLis.length === 0) _parent.after(newElem);
-                    else _parent[0].parentNode.insertBefore(newElem[0], _parent[0]);
+			if(possibleNodes[0].tagName.toLowerCase() === 'li'){
+				var _list = possibleNodes[0].parentNode.childNodes;
+				var _preLis = [], _postLis = [], _found = false;
+				for(i = 0; i < _list.length; i++){
+					if(_list[i] === possibleNodes[0]){
+						_found = true;
+					}else if(!_found) _preLis.push(_list[i]);
+					else _postLis.push(_list[i]);
+				}
+				var _parent = angular.element(possibleNodes[0].parentNode);
+				var newElem = angular.element('<p></p>');
+				newElem.html(angular.element(possibleNodes[0]).html());
+				if(_preLis.length === 0 || _postLis.length === 0){
+					if(_postLis.length === 0) _parent.after(newElem);
+					else _parent[0].parentNode.insertBefore(newElem[0], _parent[0]);
 
-                    if(_preLis.length === 0 && _postLis.length === 0) _parent.remove();
-                    else angular.element(possibleNodes[0]).remove();
-                }else{
-                    var _firstList = angular.element('<'+_parent[0].tagName+'></'+_parent[0].tagName+'>');
-                    var _secondList = angular.element('<'+_parent[0].tagName+'></'+_parent[0].tagName+'>');
-                    for(i = 0; i < _preLis.length; i++) _firstList.append(angular.element(_preLis[i]));
-                    for(i = 0; i < _postLis.length; i++) _secondList.append(angular.element(_postLis[i]));
-                    _parent.after(_secondList);
-                    _parent.after(newElem);
-                    _parent.after(_firstList);
-                    _parent.remove();
-                }
-                taSelection.setSelectionToElementEnd(newElem[0]);
-            }
+					if(_preLis.length === 0 && _postLis.length === 0) _parent.remove();
+					else angular.element(possibleNodes[0]).remove();
+				}else{
+					var _firstList = angular.element('<'+_parent[0].tagName+'></'+_parent[0].tagName+'>');
+					var _secondList = angular.element('<'+_parent[0].tagName+'></'+_parent[0].tagName+'>');
+					for(i = 0; i < _preLis.length; i++) _firstList.append(angular.element(_preLis[i]));
+					for(i = 0; i < _postLis.length; i++) _secondList.append(angular.element(_postLis[i]));
+					_parent.after(_secondList);
+					_parent.after(newElem);
+					_parent.after(_firstList);
+					_parent.remove();
+				}
+				taSelection.setSelectionToElementEnd(newElem[0]);
+			}
      *******************/
 
 
@@ -874,15 +890,162 @@ angular.module('textAngularSetup', [])
             return true;
         }
         return false;
-    };
+	};
 
-    taRegisterTool('insertImage', {
-        iconclass: 'fa fa-picture-o',
-        tooltiptext: taTranslations.insertImage.tooltip,
-        action: function(){
-            var imageLink;
-            imageLink = $window.prompt(taTranslations.insertImage.dialogPrompt, 'http://');
-            if(imageLink && imageLink !== '' && imageLink !== 'http://'){
+	var tableOnSelectAction = function (event, $element, editorScope){
+		var finishEdit = function(){
+			editorScope.updateTaBindtaTextElement();
+			editorScope.hidePopover();
+		};
+		
+		event.preventDefault();
+		editorScope.displayElements.popover.css('width', '275px');
+		var container = editorScope.displayElements.popoverContainer;
+		container.empty();
+		
+		var tableEditGroup = angular.element('<div class="btn-group tablePopupBtnGroup">');
+		var addRowButton = angular.element('<button type="button" class="btn btn-primary btn-sm btn-small" unselectable="on" tabindex="-1">&nbsp;&nbsp;Add Row&nbsp;</button>');
+		addRowButton.on('click', function(event){
+			event.preventDefault();
+			var tbody = $element;
+			var colnums = tbody.find("tr:nth-child(1)").children().length;
+			var col = "<td>&nbsp;</td>";
+			var allCols = "";
+			for (var x = 0; x < colnums; x++){
+				allCols = allCols + col;
+			}
+			var newElem = "<tr>" + allCols + "</tr>";
+			tbody.append(newElem);
+			finishEdit();
+		});
+		var addColButton = angular.element('<button type="button" class="btn btn-primary btn-sm btn-small" unselectable="on" tabindex="-1">Add Column</button>');
+		addColButton.on('click', function(event){
+			event.preventDefault();
+		
+			var tbody = $element;
+			var col = "<td>&nbsp;</td>";
+			tbody.find("tr").each(function(){
+				$(this).append(col);
+			});
+		
+			var colnums = tbody.find("tr:nth-child(1)").children().length;
+		
+			tbody.find("tr:first").find("td").each(function(){
+				$(this).width(100 / colnums);
+			});
+			finishEdit();
+		});
+		
+		var tableEditGroupRemoves = angular.element('<div class="btn-group tablePopupBtnGroup">');
+		
+		var remRowButton = angular.element('<button type="button" class="btn btn-warning btn-sm btn-small" unselectable="on" tabindex="-1">&nbsp;&nbsp;Remove Row&nbsp;</button>');
+		remRowButton.on('click', function(event){
+			// alert("Rem Row " + $element.html());
+			event.preventDefault();
+			var tbody = $element;
+			var lastrow = tbody.find('tr:last');
+			lastrow.remove();
+			finishEdit();
+		});
+		
+		var remColButton = angular.element('<button type="button" class="btn btn-warning btn-sm btn-small" unselectable="on" tabindex="-1">Remove Column</button>');
+		remColButton.on('click', function(event){
+			event.preventDefault();
+			var tbody = $element;
+			tbody.find("tr").each(function(){
+				$(this).find("td:last").remove();
+			});
+			finishEdit();
+		});
+		
+		tableEditGroup.append(addRowButton);
+		tableEditGroup.append(addColButton);
+		
+		tableEditGroupRemoves.append(remRowButton);
+		tableEditGroupRemoves.append(remColButton);
+		container.append(tableEditGroup);
+		container.append(tableEditGroupRemoves);
+		
+		var buttonGroup = angular.element('<div class="btn-group tablePopupBtnGroup">');
+		var fullButton = angular.element('<button type="button" class="btn btn-default btn-sm btn-small" unselectable="on" tabindex="-1">100%</button>');
+		fullButton.on('click', function(event){
+			event.preventDefault();
+			$element.css({
+				'width': '100%',
+				'height': ''
+			});
+			finishEdit();
+		});
+		var halfButton = angular.element('<button type="button" class="btn btn-default btn-sm btn-small" unselectable="on" tabindex="-1">50%&nbsp;</button>');
+		halfButton.on('click', function(event){
+			event.preventDefault();
+			$element.css({
+				'width': '50%',
+				'height': ''
+			});
+			finishEdit();
+		});
+		var quartButton = angular.element('<button type="button" class="btn btn-default btn-sm btn-small" unselectable="on" tabindex="-1">25%&nbsp;</button>');
+		quartButton.on('click', function(event){
+			event.preventDefault();
+			$element.css({
+				'width': '25%',
+				'height': ''
+			});
+			finishEdit();
+		});
+		
+		buttonGroup.append(quartButton);
+		buttonGroup.append(halfButton);
+		buttonGroup.append(fullButton);
+		container.append(buttonGroup);
+		
+		var deleteGroup = angular.element('<div class="btn-group tablePopupBtnGroup">');
+		
+		var remove = angular.element('<button type="button" class="btn btn-danger btn-sm btn-small" unselectable="on" tabindex="-1"><i class="fa fa-trash-o"></i></button>');
+		remove.on('click', function(event){
+			event.preventDefault();
+			$element.remove();
+			finishEdit();
+		});
+		deleteGroup.append(remove);
+		container.append(deleteGroup);
+		
+		editorScope.showPopover($element);
+	};
+
+	var createTable = function (dimensions) {
+
+		var htmlTable = null;
+
+		if(dimensions === null || dimensions.row === undefined || dimensions.row === null || 
+			dimensions.col === undefined || dimensions.col === null)
+			return htmlTable;
+
+		if(angular.isNumber(dimensions.row) && angular.isNumber(dimensions.col) && dimensions.row > 0 && dimensions.col > 0 ) {
+
+			var table = "<p><br/></p><p><br/></p><div class='TableBorder'><table class='table table-hover table-bordered freeTextTable'>";
+			var colWidth = 100/dimensions.col;
+
+			for (var idxRow = 0; idxRow < dimensions.row; idxRow++) {
+				var rowTag = "<tr>";
+				for (var idxCol = 0; idxCol < dimensions.col; idxCol++) {
+					rowTag += "<td" + (idxRow === 0 ? ' style="width: ' + colWidth + '%;"' : '') + ">&nbsp;</td>";
+				}
+				table += rowTag + "</tr>";
+			}
+			htmlTable = table + "</table></div><p><br/></p><p><br/></p>";
+		}
+		return htmlTable;
+	};
+
+	taRegisterTool('insertImage', {
+		iconclass: 'fa fa-picture-o',
+		tooltiptext: taTranslations.insertImage.tooltip,
+		action: function(){
+			var imageLink;
+			imageLink = $window.prompt(taTranslations.insertImage.dialogPrompt, 'http://');
+			if(imageLink && imageLink !== '' && imageLink !== 'http://'){
                 /* istanbul ignore next: don't know how to test this... since it needs a dialogPrompt */
                 // block javascript here
                 if (!blockJavascript(imageLink)) {
@@ -891,7 +1054,7 @@ angular.module('textAngularSetup', [])
                         // insertion point past the <a> element, otherwise FireFox inserts inside the <a>
                         // With this change, both FireFox and Chrome behave the same way!
                         taSelection.setSelectionAfterElement(taSelection.getSelectionElement());
-                    }
+			}
                     // In the past we used the simple statement:
                     //return this.$editor().wrapSelection('insertImage', imageLink, true);
                     //
@@ -904,33 +1067,90 @@ angular.module('textAngularSetup', [])
                     return this.$editor().wrapSelection('insertHTML', embed, true);
                 }
             }
-        },
-        onElementSelect: {
-            element: 'img',
+		},
+		onElementSelect: {
+			element: 'img',
             action: taToolFunctions.imgOnSelectAction
-        }
-    });
-    taRegisterTool('insertVideo', {
-        iconclass: 'fa fa-youtube-play',
-        tooltiptext: taTranslations.insertVideo.tooltip,
-        action: function(){
-            var urlPrompt;
-            urlPrompt = $window.prompt(taTranslations.insertVideo.dialogPrompt, 'https://');
+		}
+	});
+
+	taRegisterTool('insertTable', {
+		iconclass: "fa fa-table",
+		tooltiptext: taTranslations.insertTable.tooltip,
+		action: function(){
+
+			var textAngular = this;
+
+			// Prepare to show the windows prompt to take in the table dimensions. This will be shown if there is no modal implemented from the main application
+			if(taOptions.tableInsertPromptRequest === null) {
+				taOptions.tableInsertPromptRequest = {};
+			}
+			taOptions.tableInsertPromptRequest.window = $window;
+			taOptions.tableInsertPromptRequest.message = taTranslations.insertTable.dialogPrompt;
+
+			var result = taOptions.showTableCreationPrompt();
+			
+			// The default table creation prompt is the windows prompt. This should return a string.
+			if (result && typeof(result) === 'string') {
+
+				// This string ideally will be comma separated. Split this string to get the row & column counts.
+				var list = result.split(',');
+				if(list && list.length > 0){
+					var dimensions = {
+						row: parseInt(list[0]),
+						col: parseInt(list[1])
+					};
+					// Then create the table html and append it to the editor.
+					var html = createTable(dimensions);
+					if (html !== null){
+						textAngular.$editor().wrapSelection('insertHTML', html, true);
+					}
+				}		
+			}
+			// A modal will return a promise. So handle it appropriately
+			else if (result && typeof(result) === 'object' && result.then && typeof(result.then) === 'function') {
+				var htmlTable = null;
+				// Wait until the modal is closed and we have data
+				result.then(function(data) {
+					// Then create the table html and append it to the editor.
+					htmlTable = createTable(data);
+					if (htmlTable !== null){
+						// Inserting the html first time seems to append it outside the textAngular area. The second try works, not sure why
+						textAngular.$editor().wrapSelection('insertHTML', '', true);
+						textAngular.$editor().wrapSelection('insertHTML', htmlTable, true);
+					}
+				});
+			}
+						
+			return false;
+		},
+		onElementSelect: {
+			element: 'table',
+			action: tableOnSelectAction
+		}
+	});
+	
+	taRegisterTool('insertVideo', {
+		iconclass: 'fa fa-youtube-play',
+		tooltiptext: taTranslations.insertVideo.tooltip,
+		action: function(){
+			var urlPrompt;
+			urlPrompt = $window.prompt(taTranslations.insertVideo.dialogPrompt, 'https://');
             // block javascript here
             /* istanbul ignore else: if it's javascript don't worry - though probably should show some kind of error message */
             if (!blockJavascript(urlPrompt)) {
 
-                if (urlPrompt && urlPrompt !== '' && urlPrompt !== 'https://') {
+			if (urlPrompt && urlPrompt !== '' && urlPrompt !== 'https://') {
 
                     videoId = taToolFunctions.extractYoutubeVideoId(urlPrompt);
 
-                    /* istanbul ignore else: if it's invalid don't worry - though probably should show some kind of error message */
+				/* istanbul ignore else: if it's invalid don't worry - though probably should show some kind of error message */
                     if (videoId) {
-                        // create the embed link
+					// create the embed link
                         var urlLink = "https://www.youtube.com/embed/" + videoId;
-                        // create the HTML
-                        // for all options see: http://stackoverflow.com/questions/2068344/how-do-i-get-a-youtube-video-thumbnail-from-the-youtube-api
-                        // maxresdefault.jpg seems to be undefined on some.
+					// create the HTML
+					// for all options see: http://stackoverflow.com/questions/2068344/how-do-i-get-a-youtube-video-thumbnail-from-the-youtube-api
+					// maxresdefault.jpg seems to be undefined on some.
                         var embed = '<img class="ta-insert-video" src="https://img.youtube.com/vi/' + videoId + '/hqdefault.jpg" ta-insert-video="' + urlLink + '" contenteditable="false" allowfullscreen="true" frameborder="0" />';
                         /* istanbul ignore next: don't know how to test this... since it needs a dialogPrompt */
                         if (taSelection.getSelectionElement().tagName && taSelection.getSelectionElement().tagName.toLowerCase() === 'a') {
@@ -939,93 +1159,93 @@ angular.module('textAngularSetup', [])
                             // With this change, both FireFox and Chrome behave the same way!
                             taSelection.setSelectionAfterElement(taSelection.getSelectionElement());
                         }
-                        // insert
-                        return this.$editor().wrapSelection('insertHTML', embed, true);
-                    }
-                }
+					// insert
+					return this.$editor().wrapSelection('insertHTML', embed, true);
+				}
+			}
             }
-        },
-        onElementSelect: {
-            element: 'img',
-            onlyWithAttrs: ['ta-insert-video'],
+		},
+		onElementSelect: {
+			element: 'img',
+			onlyWithAttrs: ['ta-insert-video'],
             action: taToolFunctions.imgOnSelectAction
-        }
-    });
-    taRegisterTool('insertLink', {
-        tooltiptext: taTranslations.insertLink.tooltip,
-        iconclass: 'fa fa-link',
-        action: function(){
-            var urlLink;
+		}
+	});
+	taRegisterTool('insertLink', {
+		tooltiptext: taTranslations.insertLink.tooltip,
+		iconclass: 'fa fa-link',
+		action: function(){
+			var urlLink;
             // if this link has already been set, we need to just edit the existing link
             /* istanbul ignore if: we do not test this */
             if (taSelection.getSelectionElement().tagName && taSelection.getSelectionElement().tagName.toLowerCase() === 'a') {
                 urlLink = $window.prompt(taTranslations.insertLink.dialogPrompt, taSelection.getSelectionElement().href);
             } else {
-                urlLink = $window.prompt(taTranslations.insertLink.dialogPrompt, 'http://');
+			urlLink = $window.prompt(taTranslations.insertLink.dialogPrompt, 'http://');
             }
-            if(urlLink && urlLink !== '' && urlLink !== 'http://'){
+			if(urlLink && urlLink !== '' && urlLink !== 'http://'){
                 // block javascript here
                 /* istanbul ignore else: if it's javascript don't worry - though probably should show some kind of error message */
                 if (!blockJavascript(urlLink)) {
-                    return this.$editor().wrapSelection('createLink', urlLink, true);
-                }
+				return this.$editor().wrapSelection('createLink', urlLink, true);
+			}
             }
-        },
-        activeState: function(commonElement){
-            if(commonElement) return commonElement[0].tagName === 'A';
-            return false;
-        },
-        onElementSelect: {
-            element: 'a',
+		},
+		activeState: function(commonElement){
+			if(commonElement) return commonElement[0].tagName === 'A';
+			return false;
+		},
+		onElementSelect: {
+			element: 'a',
             action: taToolFunctions.aOnSelectAction
-        }
-    });
-    taRegisterTool('wordcount', {
-        display: '<div id="toolbarWC" style="display:block; min-width:100px;">Words: <span ng-bind="wordcount"></span></div>',
-        disabled: true,
-        wordcount: 0,
-        activeState: function(){ // this fires on keyup
-            var textElement = this.$editor().displayElements.text;
-            /* istanbul ignore next: will default to '' when undefined */
-            var workingHTML = textElement[0].innerHTML || '';
-            var noOfWords = 0;
+					}
+				});
+	taRegisterTool('wordcount', {
+		display: '<div id="toolbarWC" style="display:block; min-width:100px;"><span translate="TEXT_ANGULAR_WORDS"></span><span>:</span> <span ng-bind="wordcount"></span></div>',
+		disabled: true,
+		wordcount: 0,
+		activeState: function(){ // this fires on keyup
+			var textElement = this.$editor().displayElements.text;
+			/* istanbul ignore next: will default to '' when undefined */
+			var workingHTML = textElement[0].innerHTML || '';
+			var noOfWords = 0;
 
-            /* istanbul ignore if: will default to '' when undefined */
-            if (workingHTML.replace(/\s*<[^>]*?>\s*/g, '') !== '') {
+			/* istanbul ignore if: will default to '' when undefined */
+			if (workingHTML.replace(/\s*<[^>]*?>\s*/g, '') !== '') {
                 if (workingHTML.trim() !== '') {
-                    noOfWords = workingHTML.replace(/<\/?(b|i|em|strong|span|u|strikethrough|a|img|small|sub|sup|label)( [^>*?])?>/gi, '') // remove inline tags without adding spaces
-                        .replace(/(<[^>]*?>\s*<[^>]*?>)/ig, ' ') // replace adjacent tags with possible space between with a space
-                        .replace(/(<[^>]*?>)/ig, '') // remove any singular tags
-                        .replace(/\s+/ig, ' ') // condense spacing
-                        .match(/\S+/g).length; // count remaining non-space strings
-                }
+				noOfWords = workingHTML.replace(/<\/?(b|i|em|strong|span|u|strikethrough|a|img|small|sub|sup|label)( [^>*?])?>/gi, '') // remove inline tags without adding spaces
+										.replace(/(<[^>]*?>\s*<[^>]*?>)/ig, ' ') // replace adjacent tags with possible space between with a space
+										.replace(/(<[^>]*?>)/ig, '') // remove any singular tags
+										.replace(/\s+/ig, ' ') // condense spacing
+										.match(/\S+/g).length; // count remaining non-space strings
+			}
             }
 
-            //Set current scope
-            this.wordcount = noOfWords;
-            //Set editor scope
-            this.$editor().wordcount = noOfWords;
+			//Set current scope
+			this.wordcount = noOfWords;
+			//Set editor scope
+			this.$editor().wordcount = noOfWords;
 
-            return false;
-        }
-    });
-    taRegisterTool('charcount', {
-        display: '<div id="toolbarCC" style="display:block; min-width:120px;">Characters: <span ng-bind="charcount"></span></div>',
-        disabled: true,
-        charcount: 0,
-        activeState: function(){ // this fires on keyup
-            var textElement = this.$editor().displayElements.text;
-            var sourceText = textElement[0].innerText || textElement[0].textContent; // to cover the non-jquery use case.
+			return false;
+		}
+	});
+	taRegisterTool('charcount', {
+		display: '<div id="toolbarCC" style="display:block; min-width:120px;"><span translate="TEXT_ANGULAR_CHARACTERS"></span><span>:</span> <span ng-bind="charcount"></span></div>',
+		disabled: true,
+		charcount: 0,
+		activeState: function(){ // this fires on keyup
+			var textElement = this.$editor().displayElements.text;
+			var sourceText = textElement[0].innerText || textElement[0].textContent; // to cover the non-jquery use case.
 
-            // Caculate number of chars
-            var noOfChars = sourceText.replace(/(\r\n|\n|\r)/gm,"").replace(/^\s+/g,' ').replace(/\s+$/g, ' ').length;
-            //Set current scope
-            this.charcount = noOfChars;
-            //Set editor scope
-            this.$editor().charcount = noOfChars;
-            return false;
-        }
-    });
+			// Caculate number of chars
+			var noOfChars = sourceText.replace(/(\r\n|\n|\r)/gm,"").replace(/^\s+/g,' ').replace(/\s+$/g, ' ').length;
+			//Set current scope
+			this.charcount = noOfChars;
+			//Set editor scope
+			this.$editor().charcount = noOfChars;
+			return false;
+		}
+	});
 }]);
 
 /*
@@ -3898,22 +4118,22 @@ angular.module('textAngular.taBind', ['textAngular.factories', 'textAngular.DOM'
 var dropFired = false;
 var textAngular = angular.module("textAngular", ['ngSanitize', 'textAngularSetup', 'textAngular.factories', 'textAngular.DOM', 'textAngular.validators', 'textAngular.taBind']); //This makes ngSanitize required
 
-textAngular.config([function(){
+textAngular.config([function () {
     // clear taTools variable. Just catches testing and any other time that this config may run multiple times...
-    angular.forEach(taTools, function(value, key){ delete taTools[key];	});
+    angular.forEach(taTools, function (value, key) { delete taTools[key]; });
 }]);
 
 textAngular.directive("textAngular", [
     '$compile', '$timeout', 'taOptions', 'taSelection', 'taExecCommand',
     'textAngularManager', '$document', '$animate', '$log', '$q', '$parse',
-    function($compile, $timeout, taOptions, taSelection, taExecCommand,
-        textAngularManager, $document, $animate, $log, $q, $parse){
+    function ($compile, $timeout, taOptions, taSelection, taExecCommand,
+        textAngularManager, $document, $animate, $log, $q, $parse) {
         return {
             require: '?ngModel',
             scope: {},
             restrict: "EA",
             priority: 2, // So we override validators correctly
-            link: function(scope, element, attrs, ngModel){
+            link: function (scope, element, attrs, ngModel) {
                 // all these vars should not be accessable outside this directive
                 var _keydown, _keyup, _keypress, _mouseup, _focusin, _focusout,
                     _originalContents, _editorFunctions,
@@ -3923,8 +4143,8 @@ textAngular.directive("textAngular", [
 
                 scope._name = (attrs.name) ? attrs.name : 'textAngularEditor' + _serial;
 
-                var oneEvent = function(_element, event, action){
-                    $timeout(function(){
+                var oneEvent = function (_element, event, action) {
+                    $timeout(function () {
                         _element.one(event, action);
                     }, 100);
                 };
@@ -3932,18 +4152,18 @@ textAngular.directive("textAngular", [
                 // get the settings from the defaults and add our specific functions that need to be on the scope
                 angular.extend(scope, angular.copy(taOptions), {
                     // wraps the selection in the provided tag / execCommand function. Should only be called in WYSIWYG mode.
-                    wrapSelection: function(command, opt, isSelectableElementTool){
+                    wrapSelection: function (command, opt, isSelectableElementTool) {
                         // we restore the saved selection that was saved when focus was lost
                         /* NOT FUNCTIONAL YET */
                         /* textAngularManager.restoreFocusSelection(scope._name, scope); */
-                        if(command.toLowerCase() === "undo"){
+                        if (command.toLowerCase() === "undo") {
                             scope['$undoTaBindtaTextElement' + _serial]();
-                        }else if(command.toLowerCase() === "redo"){
+                        } else if (command.toLowerCase() === "redo") {
                             scope['$redoTaBindtaTextElement' + _serial]();
-                        }else{
+                        } else {
                             // catch errors like FF erroring when you try to force an undo with nothing done
                             _taExecCommand(command, false, opt, scope.defaultTagAttributes);
-                            if(isSelectableElementTool){
+                            if (isSelectableElementTool) {
                                 // re-apply the selectable tool events
                                 scope['reApplyOnSelectorHandlerstaTextElement' + _serial]();
                             }
@@ -3955,11 +4175,11 @@ textAngular.directive("textAngular", [
                     showHtml: scope.$eval(attrs.taShowHtml) || false
                 });
                 // setup the options from the optional attributes
-                if(attrs.taFocussedClass)			scope.classes.focussed = attrs.taFocussedClass;
-                if(attrs.taTextEditorClass)			scope.classes.textEditor = attrs.taTextEditorClass;
-                if(attrs.taHtmlEditorClass)			scope.classes.htmlEditor = attrs.taHtmlEditorClass;
-                if(attrs.taDefaultTagAttributes){
-                    try	{
+                if (attrs.taFocussedClass) scope.classes.focussed = attrs.taFocussedClass;
+                if (attrs.taTextEditorClass) scope.classes.textEditor = attrs.taTextEditorClass;
+                if (attrs.taHtmlEditorClass) scope.classes.htmlEditor = attrs.taHtmlEditorClass;
+                if (attrs.taDefaultTagAttributes) {
+                    try {
                         //	TODO: This should use angular.merge to enhance functionality once angular 1.4 is required
                         angular.extend(scope.defaultTagAttributes, angular.fromJson(attrs.taDefaultTagAttributes));
                     } catch (error) {
@@ -3967,11 +4187,11 @@ textAngular.directive("textAngular", [
                     }
                 }
                 // optional setup functions
-                if(attrs.taTextEditorSetup)			scope.setup.textEditorSetup = scope.$parent.$eval(attrs.taTextEditorSetup);
-                if(attrs.taHtmlEditorSetup)			scope.setup.htmlEditorSetup = scope.$parent.$eval(attrs.taHtmlEditorSetup);
+                if (attrs.taTextEditorSetup) scope.setup.textEditorSetup = scope.$parent.$eval(attrs.taTextEditorSetup);
+                if (attrs.taHtmlEditorSetup) scope.setup.htmlEditorSetup = scope.$parent.$eval(attrs.taHtmlEditorSetup);
                 // optional fileDropHandler function
-                if(attrs.taFileDrop)				scope.fileDropHandler = scope.$parent.$eval(attrs.taFileDrop);
-                else								scope.fileDropHandler = scope.defaultFileDropHandler;
+                if (attrs.taFileDrop) scope.fileDropHandler = scope.$parent.$eval(attrs.taFileDrop);
+                else scope.fileDropHandler = scope.defaultFileDropHandler;
 
                 _originalContents = element[0].innerHTML;
                 // clear the original content
@@ -4007,19 +4227,19 @@ textAngular.directive("textAngular", [
                 scope.displayElements.popover.append(scope.displayElements.popoverContainer);
                 scope.displayElements.scrollWindow.append(scope.displayElements.popover);
 
-                scope.displayElements.popover.on('mousedown', function(e, eventData){
+                scope.displayElements.popover.on('mousedown', function (e, eventData) {
                     /* istanbul ignore else: this is for catching the jqLite testing*/
-                    if(eventData) angular.extend(e, eventData);
+                    if (eventData) angular.extend(e, eventData);
                     // this prevents focusout from firing on the editor when clicking anything in the popover
                     e.preventDefault();
                     return false;
                 });
 
                 /* istanbul ignore next: popover resize and scroll events handled */
-                scope.handlePopoverEvents = function() {
-                    if (scope.displayElements.popover.css('display')==='block') {
-                        if(_resizeTimeout) $timeout.cancel(_resizeTimeout);
-                        _resizeTimeout = $timeout(function() {
+                scope.handlePopoverEvents = function () {
+                    if (scope.displayElements.popover.css('display') === 'block') {
+                        if (_resizeTimeout) $timeout.cancel(_resizeTimeout);
+                        _resizeTimeout = $timeout(function () {
                             //console.log('resize', scope.displayElements.popover.css('display'));
                             scope.reflowPopover(scope.resizeElement);
                             scope.reflowResizeOverlay(scope.resizeElement);
@@ -4035,7 +4255,7 @@ textAngular.directive("textAngular", [
 
                 // we want to know if a given node has a scrollbar!
                 // credit to lotif on http://stackoverflow.com/questions/4880381/check-whether-html-element-has-scrollbars
-                var isScrollable = function(node) {
+                var isScrollable = function (node) {
                     var cs;
                     var _notScrollable = {
                         vertical: false,
@@ -4054,11 +4274,11 @@ textAngular.directive("textAngular", [
                     var overflowX = cs['overflow-x'];
                     return {
                         vertical: (overflowY === 'scroll' || overflowY === 'auto') &&
-                                    /* istanbul ignore next: not tested */
-                                    node.scrollHeight > node.clientHeight,
+                            /* istanbul ignore next: not tested */
+                            node.scrollHeight > node.clientHeight,
                         horizontal: (overflowX === 'scroll' || overflowX === 'auto') &&
-                                    /* istanbul ignore next: not tested */
-                                    node.scrollWidth > node.clientWidth,
+                            /* istanbul ignore next: not tested */
+                            node.scrollWidth > node.clientWidth,
                     };
                 };
 
@@ -4083,45 +4303,45 @@ textAngular.directive("textAngular", [
                     }
                     /* istanbul ignore next: triggered only if has scrollbar and scrolled */
                     if (scrollTop !== 0) {
-                        return { node:_el.nodeName, top:scrollTop };
+                        return { node: _el.nodeName, top: scrollTop };
                     }
                     /* istanbul ignore else: catches only if no scroll */
                     if (_el.parentNode) {
                         return scope.getScrollTop(_el.parentNode, bAddListener);
                     } else {
-                        return { node:'<none>', top:0 };
+                        return { node: '<none>', top: 0 };
                     }
                 };
 
                 // define the popover show and hide functions
-                scope.showPopover = function(_el){
+                scope.showPopover = function (_el) {
                     scope.getScrollTop(scope.displayElements.scrollWindow[0], true);
                     scope.displayElements.popover.css('display', 'block');
                     // we must use a $timeout here, or the css change to the
                     // displayElements.resize.overlay will not take!!!
                     // WHY???
-                    $timeout(function() {
+                    $timeout(function () {
                         scope.displayElements.resize.overlay.css('display', 'block');
                     });
                     scope.resizeElement = _el;
                     scope.reflowPopover(_el);
                     $animate.addClass(scope.displayElements.popover, 'in');
-                    oneEvent($document.find('body'), 'click keyup', function(){scope.hidePopover();});
+                    oneEvent($document.find('body'), 'click keyup', function () { scope.hidePopover(); });
                 };
 
                 /* istanbul ignore next: browser scroll event handler */
-                scope._scrollListener = function (e, eventData){
+                scope._scrollListener = function (e, eventData) {
                     scope.handlePopoverEvents();
                 };
 
-                scope.reflowPopover = function(_el){
+                scope.reflowPopover = function (_el) {
                     var scrollTop = scope.getScrollTop(scope.displayElements.scrollWindow[0], false);
-                    var spaceAboveImage = _el[0].offsetTop-scrollTop.top;
+                    var spaceAboveImage = _el[0].offsetTop - scrollTop.top;
                     //var spaceBelowImage = scope.displayElements.text[0].offsetHeight - _el[0].offsetHeight - spaceAboveImage;
                     //console.log(spaceAboveImage, spaceBelowImage);
 
                     /* istanbul ignore if: catches only if near bottom of editor */
-                    if(spaceAboveImage < 51) {
+                    if (spaceAboveImage < 51) {
                         scope.displayElements.popover.css('top', _el[0].offsetTop + _el[0].offsetHeight + scope.displayElements.scrollWindow[0].scrollTop + 'px');
                         scope.displayElements.popover.removeClass('top').addClass('bottom');
                     } else {
@@ -4137,7 +4357,7 @@ textAngular.directive("textAngular", [
                     scope.displayElements.popover.css('left', _rleft + 'px');
                     scope.displayElements.popoverArrow.css('margin-left', _marginLeft + 'px');
                 };
-                scope.hidePopover = function(){
+                scope.hidePopover = function () {
                     scope.displayElements.popover.css('display', 'none');
                     scope.displayElements.popoverContainer.attr('style', '');
                     scope.displayElements.popoverContainer.attr('class', 'popover-content');
@@ -4147,18 +4367,18 @@ textAngular.directive("textAngular", [
 
                 // setup the resize overlay
                 scope.displayElements.resize.overlay.append(scope.displayElements.resize.background);
-                angular.forEach(scope.displayElements.resize.anchors, function(anchor){ scope.displayElements.resize.overlay.append(anchor);});
+                angular.forEach(scope.displayElements.resize.anchors, function (anchor) { scope.displayElements.resize.overlay.append(anchor); });
                 scope.displayElements.resize.overlay.append(scope.displayElements.resize.info);
                 scope.displayElements.scrollWindow.append(scope.displayElements.resize.overlay);
 
                 // A click event on the resize.background will now shift the focus to the editor
                 /* istanbul ignore next: click on the resize.background to focus back to editor */
-                scope.displayElements.resize.background.on('click', function(e) {
+                scope.displayElements.resize.background.on('click', function (e) {
                     scope.displayElements.text[0].focus();
                 });
 
                 // define the show and hide events
-                scope.reflowResizeOverlay = function(_el){
+                scope.reflowResizeOverlay = function (_el) {
                     _el = angular.element(_el)[0];
                     scope.displayElements.resize.overlay.css({
                         'display': 'block',
@@ -4170,20 +4390,20 @@ textAngular.directive("textAngular", [
                     scope.displayElements.resize.info.text(_el.offsetWidth + ' x ' + _el.offsetHeight);
                 };
                 /* istanbul ignore next: pretty sure phantomjs won't test this */
-                scope.showResizeOverlay = function(_el){
+                scope.showResizeOverlay = function (_el) {
                     var _body = $document.find('body');
-                    _resizeMouseDown = function(event){
+                    _resizeMouseDown = function (event) {
                         var startPosition = {
                             width: parseInt(_el.attr('width')),
                             height: parseInt(_el.attr('height')),
                             x: event.clientX,
                             y: event.clientY
                         };
-                        if(startPosition.width === undefined || isNaN(startPosition.width)) startPosition.width = _el[0].offsetWidth;
-                        if(startPosition.height === undefined || isNaN(startPosition.height)) startPosition.height = _el[0].offsetHeight;
+                        if (startPosition.width === undefined || isNaN(startPosition.width)) startPosition.width = _el[0].offsetWidth;
+                        if (startPosition.height === undefined || isNaN(startPosition.height)) startPosition.height = _el[0].offsetHeight;
                         scope.hidePopover();
                         var ratio = startPosition.height / startPosition.width;
-                        var mousemove = function(event){
+                        var mousemove = function (event) {
                             // calculate new size
                             var pos = {
                                 x: Math.max(0, startPosition.width + (event.clientX - startPosition.x)),
@@ -4197,8 +4417,8 @@ textAngular.directive("textAngular", [
                             // attribute: ta-resize-maintain-aspect-ratio=true causes the space ratio to remain locked
                             // unless the Shift key is pressed
                             var bFlipKeyBinding = attrs.taResizeMaintainAspectRatio;
-                            var bKeepRatio =  bForceAspectRatio || (bFlipKeyBinding && !event.shiftKey);
-                            if(bKeepRatio) {
+                            var bKeepRatio = bForceAspectRatio || (bFlipKeyBinding && !event.shiftKey);
+                            if (bKeepRatio) {
                                 var newRatio = pos.y / pos.x;
                                 pos.x = ratio > newRatio ? pos.x : pos.y / ratio;
                                 pos.y = ratio > newRatio ? pos.x * ratio : pos.y;
@@ -4214,7 +4434,7 @@ textAngular.directive("textAngular", [
                             scope.reflowResizeOverlay(_el);
                         };
                         _body.on('mousemove', mousemove);
-                        oneEvent(_body, 'mouseup', function(event){
+                        oneEvent(_body, 'mouseup', function (event) {
                             event.preventDefault();
                             event.stopPropagation();
                             _body.off('mousemove', mousemove);
@@ -4222,7 +4442,7 @@ textAngular.directive("textAngular", [
                             // this fixes bug: #862 - we now hide the popover -- as this seems more consitent.
                             // there are still issues under firefox, the window does not repaint. -- not sure
                             // how best to resolve this, but clicking anywhere works.
-                            scope.$apply(function (){
+                            scope.$apply(function () {
                                 scope.hidePopover();
                                 scope.updateTaBindtaTextElement();
                             }, 100);
@@ -4235,10 +4455,10 @@ textAngular.directive("textAngular", [
                     scope.displayElements.resize.anchors[3].on('mousedown', _resizeMouseDown);
 
                     scope.reflowResizeOverlay(_el);
-                    oneEvent(_body, 'click', function(){scope.hideResizeOverlay();});
+                    oneEvent(_body, 'click', function () { scope.hideResizeOverlay(); });
                 };
                 /* istanbul ignore next: pretty sure phantomjs won't test this */
-                scope.hideResizeOverlay = function(){
+                scope.hideResizeOverlay = function () {
                     scope.displayElements.resize.anchors[3].off('mousedown', _resizeMouseDown);
                     scope.displayElements.resize.overlay.css('display', 'none');
                 };
@@ -4253,25 +4473,35 @@ textAngular.directive("textAngular", [
                     'ng-model': 'html',
                     'ng-model-options': element.attr('ng-model-options')
                 });
+                textAngularManager.editorId = 'taTextElement' + _serial;
+
+                var isRequired = false;
+                if (attrs.ngRequired)
+                    isRequired = attrs.ngRequired;
+                else if (attrs.required)
+                    isRequired = attrs.required;
+
                 scope.displayElements.text.attr({
-                    'id': 'taTextElement' + _serial,
+                    'id': textAngularManager.editorId,
                     'contentEditable': 'true',
                     'ta-bind': 'ta-bind',
                     'ng-model': 'html',
+                    'aria-label': attrs.textAngularLabel,
+                    'ng-required': isRequired,
                     'ng-model-options': element.attr('ng-model-options')
                 });
-                scope.displayElements.scrollWindow.attr({'ng-hide': 'showHtml'});
-                if(attrs.taDefaultWrap) {
+                scope.displayElements.scrollWindow.attr({ 'ng-hide': 'showHtml' });
+                if (attrs.taDefaultWrap) {
                     // taDefaultWrap is only applied to the text and not the html view
                     scope.displayElements.text.attr('ta-default-wrap', attrs.taDefaultWrap);
                 }
 
-                if(attrs.taUnsafeSanitizer){
+                if (attrs.taUnsafeSanitizer) {
                     scope.displayElements.text.attr('ta-unsafe-sanitizer', attrs.taUnsafeSanitizer);
                     scope.displayElements.html.attr('ta-unsafe-sanitizer', attrs.taUnsafeSanitizer);
                 }
 
-                if(attrs.taKeepStyles){
+                if (attrs.taKeepStyles) {
                     scope.displayElements.text.attr('ta-keep-styles', attrs.taKeepStyles);
                     scope.displayElements.html.attr('ta-keep-styles', attrs.taKeepStyles);
                 }
@@ -4284,7 +4514,7 @@ textAngular.directive("textAngular", [
                 scope.displayElements.forminput.attr('name', scope._name);
                 element.append(scope.displayElements.forminput);
 
-                if(attrs.tabindex){
+                if (attrs.tabindex) {
                     element.removeAttr('tabindex');
                     scope.displayElements.text.attr('tabindex', attrs.tabindex);
                     scope.displayElements.html.attr('tabindex', attrs.tabindex);
@@ -4295,23 +4525,23 @@ textAngular.directive("textAngular", [
                     scope.displayElements.html.attr('placeholder', attrs.placeholder);
                 }
 
-                if(attrs.taDisabled){
+                if (attrs.taDisabled) {
                     scope.displayElements.text.attr('ta-readonly', 'disabled');
                     scope.displayElements.html.attr('ta-readonly', 'disabled');
                     scope.disabled = scope.$parent.$eval(attrs.taDisabled);
-                    scope.$parent.$watch(attrs.taDisabled, function(newVal){
+                    scope.$parent.$watch(attrs.taDisabled, function (newVal) {
                         scope.disabled = newVal;
-                        if(scope.disabled){
+                        if (scope.disabled) {
                             element.addClass(scope.classes.disabled);
-                        }else{
+                        } else {
                             element.removeClass(scope.classes.disabled);
                         }
                     });
                 }
 
-                if(attrs.taPaste){
-                    scope._pasteHandler = function(_html){
-                        return $parse(attrs.taPaste)(scope.$parent, {$html: _html});
+                if (attrs.taPaste) {
+                    scope._pasteHandler = function (_html) {
+                        return $parse(attrs.taPaste)(scope.$parent, { $html: _html });
                     };
                     scope.displayElements.text.attr('ta-paste', '_pasteHandler($html)');
                 }
@@ -4328,7 +4558,7 @@ textAngular.directive("textAngular", [
                 scope.displayElements.scrollWindow.addClass("ta-text ta-editor " + scope.classes.textEditor);
                 scope.displayElements.html.addClass("ta-html ta-editor " + scope.classes.htmlEditor);
 
-                var testAndSet = function(choice, beforeState) {
+                var testAndSet = function (choice, beforeState) {
                     /* istanbul ignore next: this is only here because of a bug in rangy where rangy.saveSelection() has cleared the state */
                     if (beforeState !== $document[0].queryCommandState(choice)) {
                         $document[0].execCommand(choice, false, null);
@@ -4337,7 +4567,7 @@ textAngular.directive("textAngular", [
                 // used in the toolbar actions
                 scope._actionRunning = false;
                 var _savedSelection = false;
-                scope.startAction = function(){
+                scope.startAction = function () {
                     var _beforeStateBold = false;
                     var _beforeStateItalic = false;
                     var _beforeStateUnderline = false;
@@ -4358,18 +4588,18 @@ textAngular.directive("textAngular", [
                     testAndSet('underline', _beforeStateUnderline);
                     testAndSet('strikeThrough', _beforeStateStrikethough);
                     //console.log('B', $document[0].queryCommandState('bold'), 'I', $document[0].queryCommandState('italic'), '_', $document[0].queryCommandState('underline'), 'S', $document[0].queryCommandState('strikeThrough') );
-                    return function(){
-                        if(_savedSelection) rangy.restoreSelection(_savedSelection);
+                    return function () {
+                        if (_savedSelection) rangy.restoreSelection(_savedSelection);
                         // perhaps if we restore the selections here, we would do better overall???
                         // BUT what we do above does well in 90% of the cases...
                     };
                 };
-                scope.endAction = function(){
+                scope.endAction = function () {
                     scope._actionRunning = false;
-                    if(_savedSelection){
-                        if(scope.showHtml){
+                    if (_savedSelection) {
+                        if (scope.showHtml) {
                             scope.displayElements.html[0].focus();
-                        }else{
+                        } else {
                             scope.displayElements.text[0].focus();
                         }
                         // rangy.restoreSelection(_savedSelection);
@@ -4378,27 +4608,27 @@ textAngular.directive("textAngular", [
                     _savedSelection = false;
                     scope.updateSelectedStyles();
                     // only update if in text or WYSIWYG mode
-                    if(!scope.showHtml) scope['updateTaBindtaTextElement' + _serial]();
+                    if (!scope.showHtml) scope['updateTaBindtaTextElement' + _serial]();
                 };
 
                 // note that focusout > focusin is called everytime we click a button - except bad support: http://www.quirksmode.org/dom/events/blurfocus.html
                 // cascades to displayElements.text and displayElements.html automatically.
-                _focusin = function(e){
+                _focusin = function (e) {
                     scope.focussed = true;
                     element.addClass(scope.classes.focussed);
-/*******  NOT FUNCTIONAL YET
-                    if (e.target.id === 'taTextElement' + _serial) {
-                        console.log('_focusin taTextElement');
-                        // we only do this if NOT focussed
-                        textAngularManager.restoreFocusSelection(scope._name);
-                    }
-*******/
+                    /*******  NOT FUNCTIONAL YET
+                                        if (e.target.id === 'taTextElement' + _serial) {
+                                            console.log('_focusin taTextElement');
+                                            // we only do this if NOT focussed
+                                            textAngularManager.restoreFocusSelection(scope._name);
+                                        }
+                    *******/
                     _editorFunctions.focus();
                     element.triggerHandler('focus');
                     // we call editorScope.updateSelectedStyles() here because we want the toolbar to be focussed
                     // as soon as we have focus.  Otherwise this only happens on mousedown or keydown etc...
                     /* istanbul ignore else: don't run if already running */
-                    if(scope.updateSelectedStyles && !scope._bUpdateSelectedStyles){
+                    if (scope.updateSelectedStyles && !scope._bUpdateSelectedStyles) {
                         // we don't set editorScope._bUpdateSelectedStyles here, because we do not want the
                         // updateSelectedStyles() to run twice which it will do after 200 msec if we have
                         // set editorScope._bUpdateSelectedStyles
@@ -4411,7 +4641,7 @@ textAngular.directive("textAngular", [
                 };
                 scope.displayElements.html.on('focus', _focusin);
                 scope.displayElements.text.on('focus', _focusin);
-                _focusout = function(e){
+                _focusout = function (e) {
                     /****************** NOT FUNCTIONAL YET
                     try {
                         var _s = rangy.getSelection();
@@ -4423,73 +4653,77 @@ textAngular.directive("textAngular", [
                         }
                     } catch(error) { }
                     *****************/
-                    // if we are NOT runnig an action and have NOT focussed again on the text etc then fire the blur events
-                    if(!scope._actionRunning &&
-                        $document[0].activeElement !== scope.displayElements.html[0] &&
-                        $document[0].activeElement !== scope.displayElements.text[0])
-                    {
-                        element.removeClass(scope.classes.focussed);
-                        _editorFunctions.unfocus();
-                        // to prevent multiple apply error defer to next seems to work.
-                        $timeout(function(){
-                            scope._bUpdateSelectedStyles = false;
-                            element.triggerHandler('blur');
-                            scope.focussed = false;
-                        }, 0);
-                    }
-                    e.preventDefault();
-                    return false;
+                    // Adding a little timeout here so that the toolbarFocussed flag is properly marked
+                    $timeout(function () {
+                        if (!textAngularManager.toolbarFocussed) {
+                            // if we are NOT runnig an action and have NOT focussed again on the text etc then fire the blur events
+                            if (!scope._actionRunning &&
+                                $document[0].activeElement !== scope.displayElements.html[0] &&
+                                $document[0].activeElement !== scope.displayElements.text[0]) {
+                                element.removeClass(scope.classes.focussed);
+                                _editorFunctions.unfocus();
+                                // to prevent multiple apply error defer to next seems to work.
+                                $timeout(function () {
+                                    scope._bUpdateSelectedStyles = false;
+                                    element.triggerHandler('blur');
+                                    scope.focussed = false;
+                                }, 0);
+                            }
+                        }
+                        e.preventDefault();
+                        return false;
+                    }, 500);
                 };
                 scope.displayElements.html.on('blur', _focusout);
                 scope.displayElements.text.on('blur', _focusout);
 
-                scope.displayElements.text.on('paste', function(event){
+                scope.displayElements.text.on('paste', function (event) {
                     element.triggerHandler('paste', event);
                 });
 
                 // Setup the default toolbar tools, this way allows the user to add new tools like plugins.
                 // This is on the editor for future proofing if we find a better way to do this.
-                scope.queryFormatBlockState = function(command){
+                scope.queryFormatBlockState = function (command) {
                     // $document[0].queryCommandValue('formatBlock') errors in Firefox if we call this when focussed on the textarea
                     return !scope.showHtml && command.toLowerCase() === $document[0].queryCommandValue('formatBlock').toLowerCase();
                 };
-                scope.queryCommandState = function(command){
+                scope.queryCommandState = function (command) {
                     // $document[0].queryCommandValue('formatBlock') errors in Firefox if we call this when focussed on the textarea
                     return (!scope.showHtml) ? $document[0].queryCommandState(command) : '';
                 };
-                scope.switchView = function(){
+                scope.switchView = function () {
                     scope.showHtml = !scope.showHtml;
                     $animate.enabled(false, scope.displayElements.html);
                     $animate.enabled(false, scope.displayElements.text);
                     //Show the HTML view
                     /* istanbul ignore next: ngModel exists check */
-/* THIS is not the correct thing to do, here....
-   The ngModel is correct, but it is not formatted as the user as done it...
-                    var _model;
-                    if (ngModel) {
-                        _model = ngModel.$viewValue;
-                    } else {
-                        _model = scope.html;
-                    }
-                    var _html = scope.displayElements.html[0].value;
-                    if (getDomFromHtml(_html).childElementCount !== getDomFromHtml(_model).childElementCount) {
-                        // the model and the html do not agree
-                        // they can get out of sync and when they do, we correct that here...
-                        scope.displayElements.html.val(_model);
-                    }
-*/
-                    if(scope.showHtml){
+                    /* THIS is not the correct thing to do, here....
+                       The ngModel is correct, but it is not formatted as the user as done it...
+                                        var _model;
+                                        if (ngModel) {
+                                            _model = ngModel.$viewValue;
+                                        } else {
+                                            _model = scope.html;
+                                        }
+                                        var _html = scope.displayElements.html[0].value;
+                                        if (getDomFromHtml(_html).childElementCount !== getDomFromHtml(_model).childElementCount) {
+                                            // the model and the html do not agree
+                                            // they can get out of sync and when they do, we correct that here...
+                                            scope.displayElements.html.val(_model);
+                                        }
+                    */
+                    if (scope.showHtml) {
                         //defer until the element is visible
-                        $timeout(function(){
+                        $timeout(function () {
                             $animate.enabled(true, scope.displayElements.html);
                             $animate.enabled(true, scope.displayElements.text);
                             // [0] dereferences the DOM object from the angular.element
                             return scope.displayElements.html[0].focus();
                         }, 100);
-                    }else{
+                    } else {
                         //Show the WYSIWYG view
                         //defer until the element is visible
-                        $timeout(function(){
+                        $timeout(function () {
                             $animate.enabled(true, scope.displayElements.html);
                             $animate.enabled(true, scope.displayElements.text);
                             // [0] dereferences the DOM object from the angular.element
@@ -4500,15 +4734,15 @@ textAngular.directive("textAngular", [
 
                 // changes to the model variable from outside the html/text inputs
                 // if no ngModel, then the only input is from inside text-angular
-                if(attrs.ngModel){
+                if (attrs.ngModel) {
                     var _firstRun = true;
-                    ngModel.$render = function(){
-                        if(_firstRun){
+                    ngModel.$render = function () {
+                        if (_firstRun) {
                             // we need this firstRun to set the originalContents otherwise it gets overrided by the setting of ngModel to undefined from NaN
                             _firstRun = false;
                             // if view value is null or undefined initially and there was original content, set to the original content
                             var _initialValue = scope.$parent.$eval(attrs.ngModel);
-                            if((_initialValue === undefined || _initialValue === null) && (_originalContents && _originalContents !== '')){
+                            if ((_initialValue === undefined || _initialValue === null) && (_originalContents && _originalContents !== '')) {
                                 // on passing through to taBind it will be sanitised
                                 ngModel.$setViewValue(_originalContents);
                             }
@@ -4518,45 +4752,45 @@ textAngular.directive("textAngular", [
                         scope.html = ngModel.$viewValue || '';
                     };
                     // trigger the validation calls
-                    if(element.attr('required')) ngModel.$validators.required = function(modelValue, viewValue) {
+                    if (element.attr('required')) ngModel.$validators.required = function (modelValue, viewValue) {
                         var value = modelValue || viewValue;
                         return !(!value || value.trim() === '');
                     };
-                }else{
+                } else {
                     // if no ngModel then update from the contents of the origional html.
                     scope.displayElements.forminput.val(_originalContents);
                     scope.html = _originalContents;
                 }
 
                 // changes from taBind back up to here
-                scope.$watch('html', function(newValue, oldValue){
-                    if(newValue !== oldValue){
-                        if(attrs.ngModel && ngModel.$viewValue !== newValue) {
+                scope.$watch('html', function (newValue, oldValue) {
+                    if (newValue !== oldValue) {
+                        if (attrs.ngModel && ngModel.$viewValue !== newValue) {
                             ngModel.$setViewValue(newValue);
                         }
                         scope.displayElements.forminput.val(newValue);
                     }
                 });
 
-                if(attrs.taTargetToolbars) {
+                if (attrs.taTargetToolbars) {
                     _editorFunctions = textAngularManager.registerEditor(scope._name, scope, attrs.taTargetToolbars.split(','));
                 }
-                else{
+                else {
                     var _toolbar = angular.element('<div text-angular-toolbar name="textAngularToolbar' + _serial + '">');
                     // passthrough init of toolbar options
-                    if(attrs.taToolbar)						_toolbar.attr('ta-toolbar', attrs.taToolbar);
-                    if(attrs.taToolbarClass)				_toolbar.attr('ta-toolbar-class', attrs.taToolbarClass);
-                    if(attrs.taToolbarGroupClass)			_toolbar.attr('ta-toolbar-group-class', attrs.taToolbarGroupClass);
-                    if(attrs.taToolbarButtonClass)			_toolbar.attr('ta-toolbar-button-class', attrs.taToolbarButtonClass);
-                    if(attrs.taToolbarActiveButtonClass)	_toolbar.attr('ta-toolbar-active-button-class', attrs.taToolbarActiveButtonClass);
-                    if(attrs.taFocussedClass)				_toolbar.attr('ta-focussed-class', attrs.taFocussedClass);
+                    if (attrs.taToolbar) _toolbar.attr('ta-toolbar', attrs.taToolbar);
+                    if (attrs.taToolbarClass) _toolbar.attr('ta-toolbar-class', attrs.taToolbarClass);
+                    if (attrs.taToolbarGroupClass) _toolbar.attr('ta-toolbar-group-class', attrs.taToolbarGroupClass);
+                    if (attrs.taToolbarButtonClass) _toolbar.attr('ta-toolbar-button-class', attrs.taToolbarButtonClass);
+                    if (attrs.taToolbarActiveButtonClass) _toolbar.attr('ta-toolbar-active-button-class', attrs.taToolbarActiveButtonClass);
+                    if (attrs.taFocussedClass) _toolbar.attr('ta-focussed-class', attrs.taFocussedClass);
 
                     element.prepend(_toolbar);
                     $compile(_toolbar)(scope.$parent);
                     _editorFunctions = textAngularManager.registerEditor(scope._name, scope, ['textAngularToolbar' + _serial]);
                 }
 
-                scope.$on('$destroy', function(){
+                scope.$on('$destroy', function () {
                     textAngularManager.unregisterEditor(scope._name);
                     angular.element(window).off('blur');
                     angular.element(window).off('resize', scope.handlePopoverEvents);
@@ -4564,85 +4798,85 @@ textAngular.directive("textAngular", [
                 });
 
                 // catch element select event and pass to toolbar tools
-                scope.$on('ta-element-select', function(event, element){
-                    if(_editorFunctions.triggerElementSelect(event, element)){
+                scope.$on('ta-element-select', function (event, element) {
+                    if (_editorFunctions.triggerElementSelect(event, element)) {
                         scope['reApplyOnSelectorHandlerstaTextElement' + _serial]();
                     }
                 });
 
-/******************* no working fully
-                var distanceFromPoint = function (px, py, x, y) {
-                    return Math.sqrt((px-x)*(px-x)+(py-y)*(py-y));
-                };
-                // because each object is a rectangle and we have a single point,
-                // we need to give priority if the point is inside the rectangle
-                var getPositionDistance = function(el, x, y) {
-                    var range = document.createRange();
-                    range.selectNode(el);
-                    var rect = range.getBoundingClientRect();
-                    console.log(el, rect);
-                    range.detach();
-                    var bcr = rect;
-                    // top left
-                    var d1 = distanceFromPoint(bcr.left, bcr.top, x, y);
-                    // bottom left
-                    var d2 = distanceFromPoint(bcr.left, bcr.bottom, x, y);
-                    // top right
-                    var d3 = distanceFromPoint(bcr.right, bcr.top, x, y);
-                    // bottom right
-                    var d4 = distanceFromPoint(bcr.right, bcr.bottom, x, y);
-                    return Math.min(d1, d2, d3, d4);
-                };
-                var findClosest = function(el, minElement, maxDistance, x, y) {
-                    var _d=0;
-                    for (var i = 0; i < el.childNodes.length; i++) {
-                        var _n = el.childNodes[i];
-                        if (!_n.childNodes.length) {
-                            _d = getPositionDistance(_n, x, y);
-                            //console.log(_n, _n.childNodes, _d);
-                            if (_d < maxDistance) {
-                                maxDistance = _d;
-                                minElement = _n;
-                            }
-                        }
-                        var res = findClosest(_n, minElement, maxDistance, x, y);
-                        if (res.max < maxDistance) {
-                            maxDistance = res.max;
-                            minElement = res.min;
-                        }
-                    }
-                    return { max: maxDistance, min: minElement };
-                };
-                var getClosestElement = function (el, x, y) {
-                    return findClosest(el, null, 12341234124, x, y);
-                };
-****************/
+                /******************* no working fully
+                                var distanceFromPoint = function (px, py, x, y) {
+                                    return Math.sqrt((px-x)*(px-x)+(py-y)*(py-y));
+                                };
+                                // because each object is a rectangle and we have a single point,
+                                // we need to give priority if the point is inside the rectangle
+                                var getPositionDistance = function(el, x, y) {
+                                    var range = document.createRange();
+                                    range.selectNode(el);
+                                    var rect = range.getBoundingClientRect();
+                                    console.log(el, rect);
+                                    range.detach();
+                                    var bcr = rect;
+                                    // top left
+                                    var d1 = distanceFromPoint(bcr.left, bcr.top, x, y);
+                                    // bottom left
+                                    var d2 = distanceFromPoint(bcr.left, bcr.bottom, x, y);
+                                    // top right
+                                    var d3 = distanceFromPoint(bcr.right, bcr.top, x, y);
+                                    // bottom right
+                                    var d4 = distanceFromPoint(bcr.right, bcr.bottom, x, y);
+                                    return Math.min(d1, d2, d3, d4);
+                                };
+                                var findClosest = function(el, minElement, maxDistance, x, y) {
+                                    var _d=0;
+                                    for (var i = 0; i < el.childNodes.length; i++) {
+                                        var _n = el.childNodes[i];
+                                        if (!_n.childNodes.length) {
+                                            _d = getPositionDistance(_n, x, y);
+                                            //console.log(_n, _n.childNodes, _d);
+                                            if (_d < maxDistance) {
+                                                maxDistance = _d;
+                                                minElement = _n;
+                                            }
+                                        }
+                                        var res = findClosest(_n, minElement, maxDistance, x, y);
+                                        if (res.max < maxDistance) {
+                                            maxDistance = res.max;
+                                            minElement = res.min;
+                                        }
+                                    }
+                                    return { max: maxDistance, min: minElement };
+                                };
+                                var getClosestElement = function (el, x, y) {
+                                    return findClosest(el, null, 12341234124, x, y);
+                                };
+                ****************/
 
-                scope.$on('ta-drop-event', function(event, element, dropEvent, dataTransfer){
-                    if(dataTransfer && dataTransfer.files && dataTransfer.files.length > 0){
+                scope.$on('ta-drop-event', function (event, element, dropEvent, dataTransfer) {
+                    if (dataTransfer && dataTransfer.files && dataTransfer.files.length > 0) {
                         scope.displayElements.text[0].focus();
                         // we must set the location of the drop!
                         //console.log(dropEvent.clientX, dropEvent.clientY, dropEvent.target);
                         taSelection.setSelectionToElementEnd(dropEvent.target);
-                        angular.forEach(dataTransfer.files, function(file){
+                        angular.forEach(dataTransfer.files, function (file) {
                             // taking advantage of boolean execution, if the fileDropHandler returns true, nothing else after it is executed
                             // If it is false then execute the defaultFileDropHandler if the fileDropHandler is NOT the default one
                             // Once one of these has been executed wrap the result as a promise, if undefined or variable update the taBind, else we should wait for the promise
-                            try{
+                            try {
                                 $q.when(scope.fileDropHandler(file, scope.wrapSelection) ||
                                     (scope.fileDropHandler !== scope.defaultFileDropHandler &&
-                                    $q.when(scope.defaultFileDropHandler(file, scope.wrapSelection)))).then(function(){
-                                        scope['updateTaBindtaTextElement' + _serial]();
-                                    });
-                            }catch(error){
+                                        $q.when(scope.defaultFileDropHandler(file, scope.wrapSelection)))).then(function () {
+                                            scope['updateTaBindtaTextElement' + _serial]();
+                                        });
+                            } catch (error) {
                                 $log.error(error);
                             }
                         });
                         dropEvent.preventDefault();
                         dropEvent.stopPropagation();
-                    /* istanbul ignore else, the updates if moved text */
-                    }else{
-                        $timeout(function(){
+                        /* istanbul ignore else, the updates if moved text */
+                    } else {
+                        $timeout(function () {
                             scope['updateTaBindtaTextElement' + _serial]();
                         }, 0);
                     }
@@ -4651,48 +4885,59 @@ textAngular.directive("textAngular", [
                 // the following is for applying the active states to the tools that support it
                 scope._bUpdateSelectedStyles = false;
                 /* istanbul ignore next: browser window/tab leave check */
-                angular.element(window).on('blur', function(){
+                angular.element(window).on('blur', function () {
                     scope._bUpdateSelectedStyles = false;
                     scope.focussed = false;
                 });
                 // loop through all the tools polling their activeState function if it exists
-                scope.updateSelectedStyles = function(){
+                scope.updateSelectedStyles = function () {
                     var _selection;
                     /* istanbul ignore next: This check is to ensure multiple timeouts don't exist */
-                    if(_updateSelectedStylesTimeout) $timeout.cancel(_updateSelectedStylesTimeout);
+                    if (_updateSelectedStylesTimeout) $timeout.cancel(_updateSelectedStylesTimeout);
                     // test if the common element ISN'T the root ta-text node
-                    if((_selection = taSelection.getSelectionElement()) !== undefined && _selection.parentNode !== scope.displayElements.text[0]){
+                    if ((_selection = taSelection.getSelectionElement()) !== undefined && _selection.parentNode !== scope.displayElements.text[0]) {
                         _editorFunctions.updateSelectedStyles(angular.element(_selection));
-                    }else _editorFunctions.updateSelectedStyles();
+                    } else _editorFunctions.updateSelectedStyles();
                     // used to update the active state when a key is held down, ie the left arrow
                     /* istanbul ignore else: browser only check */
-                    if(scope._bUpdateSelectedStyles) _updateSelectedStylesTimeout = $timeout(scope.updateSelectedStyles, 200);
+                    if (scope._bUpdateSelectedStyles) _updateSelectedStylesTimeout = $timeout(scope.updateSelectedStyles, 200);
                 };
                 // start updating on keydown
-                _keydown = function(){
+                _keydown = function (event) {
                     /* istanbul ignore next: ie catch */
-                    if(!scope.focussed){
+                    if (!scope.focussed) {
                         scope._bUpdateSelectedStyles = false;
                         return;
                     }
                     /* istanbul ignore else: don't run if already running */
-                    if(!scope._bUpdateSelectedStyles){
+                    if (!scope._bUpdateSelectedStyles) {
                         scope._bUpdateSelectedStyles = true;
-                        scope.$apply(function(){
+                        scope.$apply(function () {
                             scope.updateSelectedStyles();
                         });
+                    }
+
+                    textAngularManager.toolbarFocussed = false;
+
+                    // When Alt+F10 is hit on the editor, the focus should shift to the toolbar
+                    if (event.altKey && event.keyCode === 121) {
+                        // Get the very first button displayed on the toolbar and focus on it.
+                        // The _toolbar's childNodes are the button groups. The button gorups childNodes will be the actual buttons.
+                        if (_toolbar[0] !== null && _toolbar[0].childNodes[0] !== null && _toolbar[0].childNodes[0].childNodes[0] !== null)
+                            _toolbar[0].childNodes[0].childNodes[0].focus();
+                        textAngularManager.toolbarFocussed = true;
                     }
                 };
                 scope.displayElements.html.on('keydown', _keydown);
                 scope.displayElements.text.on('keydown', _keydown);
                 // stop updating on key up and update the display/model
-                _keyup = function(){
+                _keyup = function () {
                     scope._bUpdateSelectedStyles = false;
                 };
                 scope.displayElements.html.on('keyup', _keyup);
                 scope.displayElements.text.on('keyup', _keyup);
                 // stop updating on key up and update the display/model
-                _keypress = function(event, eventData){
+                _keypress = function (event, eventData) {
                     // bug fix for Firefox.  If we are selecting a <a> already, any characters will
                     // be added within the <a> which is bad!
                     /* istanbul ignore next: don't see how to test this... */
@@ -4718,11 +4963,11 @@ textAngular.directive("textAngular", [
                         }
                     }
                     /* istanbul ignore else: this is for catching the jqLite testing*/
-                    if(eventData) angular.extend(event, eventData);
-                    scope.$apply(function(){
-                        if(_editorFunctions.sendKeyCommand(event)){
+                    if (eventData) angular.extend(event, eventData);
+                    scope.$apply(function () {
+                        if (_editorFunctions.sendKeyCommand(event)) {
                             /* istanbul ignore else: don't run if already running */
-                            if(!scope._bUpdateSelectedStyles){
+                            if (!scope._bUpdateSelectedStyles) {
                                 scope.updateSelectedStyles();
                             }
                             event.preventDefault();
@@ -4733,14 +4978,15 @@ textAngular.directive("textAngular", [
                 scope.displayElements.html.on('keypress', _keypress);
                 scope.displayElements.text.on('keypress', _keypress);
                 // update the toolbar active states when we click somewhere in the text/html boxed
-                _mouseup = function(){
+                _mouseup = function () {
                     // ensure only one execution of updateSelectedStyles()
                     scope._bUpdateSelectedStyles = false;
                     // for some reason, unless we do a $timeout here, after a _mouseup when the line is
                     // highlighted, and instead use a scope.$apply(function(){ scope.updateSelectedStyles(); });
                     // doesn't work properly, so we replaced this with:
                     /* istanbul ignore next: not tested  */
-                    $timeout(function() { scope.updateSelectedStyles(); }, 0);
+                    $timeout(function () { scope.updateSelectedStyles(); }, 0);
+                    textAngularManager.toolbarFocussed = false;
                 };
                 scope.displayElements.html.on('mouseup', _mouseup);
                 scope.displayElements.text.on('mouseup', _mouseup);
@@ -4749,389 +4995,389 @@ textAngular.directive("textAngular", [
     }
 ]);
 textAngular.service('textAngularManager', ['taToolExecuteAction', 'taTools', 'taRegisterTool', '$interval', '$rootScope', '$log',
-    function(taToolExecuteAction, taTools, taRegisterTool, $interval, $rootScope, $log){
-    // this service is used to manage all textAngular editors and toolbars.
-    // All publicly published functions that modify/need to access the toolbar or editor scopes should be in here
-    // these contain references to all the editors and toolbars that have been initialised in this app
-    var toolbars = {}, editors = {};
-    // we touch the time any change occurs through register of an editor or tool so that we
-    // in the future will fire and event to trigger an updateSelection
-    var timeRecentModification = 0;
-    var updateStyles = function(selectedElement){
-        angular.forEach(editors, function(editor) {
-            editor.editorFunctions.updateSelectedStyles(selectedElement);
+    function (taToolExecuteAction, taTools, taRegisterTool, $interval, $rootScope, $log) {
+        // this service is used to manage all textAngular editors and toolbars.
+        // All publicly published functions that modify/need to access the toolbar or editor scopes should be in here
+        // these contain references to all the editors and toolbars that have been initialised in this app
+        var toolbars = {}, editors = {}, toolbarFocussed = false;
+        // we touch the time any change occurs through register of an editor or tool so that we
+        // in the future will fire and event to trigger an updateSelection
+        var timeRecentModification = 0;
+        var updateStyles = function (selectedElement) {
+            angular.forEach(editors, function (editor) {
+                editor.editorFunctions.updateSelectedStyles(selectedElement);
+            });
+        };
+        var triggerInterval = 50;
+        var triggerIntervalTimer;
+        var setupTriggerUpdateStyles = function () {
+            timeRecentModification = Date.now();
+            /* istanbul ignore next: setup a one time updateStyles() */
+            triggerIntervalTimer = $interval(function () {
+                updateStyles();
+                triggerIntervalTimer = undefined;
+            }, triggerInterval, 1); // only trigger once
+        };
+        /* istanbul ignore next: make sure clean up on destroy */
+        $rootScope.$on('destroy', function () {
+            if (triggerIntervalTimer) {
+                $interval.cancel(triggerIntervalTimer);
+                triggerIntervalTimer = undefined;
+            }
         });
-    };
-    var triggerInterval = 50;
-    var triggerIntervalTimer;
-    var setupTriggerUpdateStyles = function() {
-        timeRecentModification = Date.now();
-        /* istanbul ignore next: setup a one time updateStyles() */
-        triggerIntervalTimer = $interval(function() {
-            updateStyles();
-            triggerIntervalTimer = undefined;
-        }, triggerInterval, 1); // only trigger once
-    };
-    /* istanbul ignore next: make sure clean up on destroy */
-    $rootScope.$on('destroy', function() {
-        if (triggerIntervalTimer) {
-            $interval.cancel(triggerIntervalTimer);
-            triggerIntervalTimer = undefined;
-        }
-    });
-    var touchModification = function() {
-        if (Math.abs(Date.now() - timeRecentModification) > triggerInterval) {
-            // we have already triggered the updateStyles a long time back... so setup it again...
-            setupTriggerUpdateStyles();
-        }
-    };
-    // when we focus into a toolbar, we need to set the TOOLBAR's $parent to be the toolbars it's linked to.
-    // We also need to set the tools to be updated to be the toolbars...
-    return {
-        // register an editor and the toolbars that it is affected by
-        registerEditor: function(editorName, editorScope, targetToolbars){
-            // NOTE: name === editorScope._name
-            // targetToolbars is an [] of 'toolbar name's
-            // targetToolbars are optional, we don't require a toolbar to function
-            if(!editorName || editorName === '') throw('textAngular Error: An editor requires a name');
-            if(!editorScope) throw('textAngular Error: An editor requires a scope');
-            if(editors[editorName]) throw('textAngular Error: An Editor with name "' + editorName + '" already exists');
-            editors[editorName] = {
-                scope: editorScope,
-                toolbars: targetToolbars,
-                // toolbarScopes used by this editor
-                toolbarScopes: [],
-                _registerToolbarScope: function(toolbarScope){
-                    // add to the list late
-                    if(this.toolbars.indexOf(toolbarScope.name) >= 0) {
-                        // if this toolbarScope is being used by this editor we add it as one of the scopes
-                        this.toolbarScopes.push(toolbarScope);
-                    }
-                },
-                // this is a suite of functions the editor should use to update all it's linked toolbars
-                editorFunctions: {
-                    disable: function(){
-                        // disable all linked toolbars
-                        angular.forEach(editors[editorName].toolbarScopes, function(toolbarScope){
-                            toolbarScope.disabled = true;
-                        });
+        var touchModification = function () {
+            if (Math.abs(Date.now() - timeRecentModification) > triggerInterval) {
+                // we have already triggered the updateStyles a long time back... so setup it again...
+                setupTriggerUpdateStyles();
+            }
+        };
+        // when we focus into a toolbar, we need to set the TOOLBAR's $parent to be the toolbars it's linked to.
+        // We also need to set the tools to be updated to be the toolbars...
+        return {
+            // register an editor and the toolbars that it is affected by
+            registerEditor: function (editorName, editorScope, targetToolbars) {
+                // NOTE: name === editorScope._name
+                // targetToolbars is an [] of 'toolbar name's
+                // targetToolbars are optional, we don't require a toolbar to function
+                if (!editorName || editorName === '') throw ('textAngular Error: An editor requires a name');
+                if (!editorScope) throw ('textAngular Error: An editor requires a scope');
+                if (editors[editorName]) throw ('textAngular Error: An Editor with name "' + editorName + '" already exists');
+                editors[editorName] = {
+                    scope: editorScope,
+                    toolbars: targetToolbars,
+                    // toolbarScopes used by this editor
+                    toolbarScopes: [],
+                    _registerToolbarScope: function (toolbarScope) {
+                        // add to the list late
+                        if (this.toolbars.indexOf(toolbarScope.name) >= 0) {
+                            // if this toolbarScope is being used by this editor we add it as one of the scopes
+                            this.toolbarScopes.push(toolbarScope);
+                        }
                     },
-                    enable: function(){
-                        // enable all linked toolbars
-                        angular.forEach(editors[editorName].toolbarScopes, function(toolbarScope){
-                            toolbarScope.disabled = false;
-                        });
-                    },
-                    focus: function(){
-                        // this should be called when the editor is focussed
-                        angular.forEach(editors[editorName].toolbarScopes, function(toolbarScope){
-                            toolbarScope._parent = editorScope;
-                            toolbarScope.disabled = false;
-                            toolbarScope.focussed = true;
-                        });
-                        editorScope.focussed = true;
-                    },
-                    unfocus: function(){
-                        // this should be called when the editor becomes unfocussed
-                        angular.forEach(editors[editorName].toolbarScopes, function(toolbarScope){
-                            toolbarScope.disabled = true;
-                            toolbarScope.focussed = false;
-                        });
-                        editorScope.focussed = false;
-                    },
-                    updateSelectedStyles: function(selectedElement){
-                        // update the active state of all buttons on liked toolbars
-                        angular.forEach(editors[editorName].toolbarScopes, function(toolbarScope){
-                            angular.forEach(toolbarScope.tools, function(toolScope){
-                                if(toolScope.activeState){
-                                    toolbarScope._parent = editorScope;
-                                    // selectedElement may be undefined if nothing selected
-                                    toolScope.active = toolScope.activeState(selectedElement);
-                                }
+                    // this is a suite of functions the editor should use to update all it's linked toolbars
+                    editorFunctions: {
+                        disable: function () {
+                            // disable all linked toolbars
+                            angular.forEach(editors[editorName].toolbarScopes, function (toolbarScope) {
+                                toolbarScope.disabled = true;
                             });
-                        });
-                    },
-                    sendKeyCommand: function(event){
-                        // we return true if we applied an action, false otherwise
-                        var result = false;
-                        if(event.ctrlKey || event.metaKey || event.specialKey) angular.forEach(taTools, function(tool, name){
-                            if(tool.commandKeyCode && (tool.commandKeyCode === event.which || tool.commandKeyCode === event.specialKey)){
-                                for(var _t = 0; _t < editors[editorName].toolbarScopes.length; _t++){
-                                    if(editors[editorName].toolbarScopes[_t].tools[name] !== undefined){
-                                        taToolExecuteAction.call(editors[editorName].toolbarScopes[_t].tools[name], editorScope);
-                                        result = true;
-                                        break;
+                        },
+                        enable: function () {
+                            // enable all linked toolbars
+                            angular.forEach(editors[editorName].toolbarScopes, function (toolbarScope) {
+                                toolbarScope.disabled = false;
+                            });
+                        },
+                        focus: function () {
+                            // this should be called when the editor is focussed
+                            angular.forEach(editors[editorName].toolbarScopes, function (toolbarScope) {
+                                toolbarScope._parent = editorScope;
+                                toolbarScope.disabled = false;
+                                toolbarScope.focussed = true;
+                            });
+                            editorScope.focussed = true;
+                        },
+                        unfocus: function () {
+                            // this should be called when the editor becomes unfocussed
+                            angular.forEach(editors[editorName].toolbarScopes, function (toolbarScope) {
+                                toolbarScope.disabled = true;
+                                toolbarScope.focussed = false;
+                            });
+                            editorScope.focussed = false;
+                        },
+                        updateSelectedStyles: function (selectedElement) {
+                            // update the active state of all buttons on liked toolbars
+                            angular.forEach(editors[editorName].toolbarScopes, function (toolbarScope) {
+                                angular.forEach(toolbarScope.tools, function (toolScope) {
+                                    if (toolScope.activeState) {
+                                        toolbarScope._parent = editorScope;
+                                        // selectedElement may be undefined if nothing selected
+                                        toolScope.active = toolScope.activeState(selectedElement);
+                                    }
+                                });
+                            });
+                        },
+                        sendKeyCommand: function (event) {
+                            // we return true if we applied an action, false otherwise
+                            var result = false;
+                            if (event.ctrlKey || event.metaKey || event.specialKey) angular.forEach(taTools, function (tool, name) {
+                                if (tool.commandKeyCode && (tool.commandKeyCode === event.which || tool.commandKeyCode === event.specialKey)) {
+                                    for (var _t = 0; _t < editors[editorName].toolbarScopes.length; _t++) {
+                                        if (editors[editorName].toolbarScopes[_t].tools[name] !== undefined) {
+                                            taToolExecuteAction.call(editors[editorName].toolbarScopes[_t].tools[name], editorScope);
+                                            result = true;
+                                            break;
+                                        }
                                     }
                                 }
-                            }
-                        });
-                        return result;
-                    },
-                    triggerElementSelect: function(event, element){
-                        // search through the taTools to see if a match for the tag is made.
-                        // if there is, see if the tool is on a registered toolbar and not disabled.
-                        // NOTE: This can trigger on MULTIPLE tools simultaneously.
-                        var elementHasAttrs = function(_element, attrs){
-                            var result = true;
-                            for(var i = 0; i < attrs.length; i++) result = result && _element.attr(attrs[i]);
+                            });
                             return result;
-                        };
-                        var workerTools = [];
-                        var unfilteredTools = {};
-                        var result = false;
-                        element = angular.element(element);
-                        // get all valid tools by element name, keep track if one matches the
-                        var onlyWithAttrsFilter = false;
-                        angular.forEach(taTools, function(tool, name){
-                            if(
-                                tool.onElementSelect &&
-                                tool.onElementSelect.element &&
-                                tool.onElementSelect.element.toLowerCase() === element[0].tagName.toLowerCase() &&
-                                (!tool.onElementSelect.filter || tool.onElementSelect.filter(element))
-                            ){
-                                // this should only end up true if the element matches the only attributes
-                                onlyWithAttrsFilter = onlyWithAttrsFilter ||
-                                    (angular.isArray(tool.onElementSelect.onlyWithAttrs) && elementHasAttrs(element, tool.onElementSelect.onlyWithAttrs));
-                                if(!tool.onElementSelect.onlyWithAttrs || elementHasAttrs(element, tool.onElementSelect.onlyWithAttrs)) unfilteredTools[name] = tool;
-                            }
-                        });
-                        // if we matched attributes to filter on, then filter, else continue
-                        if(onlyWithAttrsFilter){
-                            angular.forEach(unfilteredTools, function(tool, name){
-                                if(tool.onElementSelect.onlyWithAttrs && elementHasAttrs(element, tool.onElementSelect.onlyWithAttrs)) workerTools.push({'name': name, 'tool': tool});
-                            });
-                            // sort most specific (most attrs to find) first
-                            workerTools.sort(function(a,b){
-                                return b.tool.onElementSelect.onlyWithAttrs.length - a.tool.onElementSelect.onlyWithAttrs.length;
-                            });
-                        }else{
-                            angular.forEach(unfilteredTools, function(tool, name){
-                                workerTools.push({'name': name, 'tool': tool});
-                            });
-                        }
-                        // Run the actions on the first visible filtered tool only
-                        if(workerTools.length > 0){
-                            for(var _i = 0; _i < workerTools.length; _i++){
-                                var tool = workerTools[_i].tool;
-                                var name = workerTools[_i].name;
-                                for(var _t = 0; _t < editors[editorName].toolbarScopes.length; _t++){
-                                    if(editors[editorName].toolbarScopes[_t].tools[name] !== undefined){
-                                        tool.onElementSelect.action.call(editors[editorName].toolbarScopes[_t].tools[name], event, element, editorScope);
-                                        result = true;
-                                        break;
-                                    }
-                                }
-                                if(result) break;
-                            }
-                        }
-                        return result;
-                    }
-                }
-            };
-            angular.forEach(targetToolbars, function(_name){
-                if(toolbars[_name]) {
-                    editors[editorName].toolbarScopes.push(toolbars[_name]);
-                }
-                // if it doesn't exist it may not have been compiled yet and it will be added later
-            });
-            touchModification();
-            return editors[editorName].editorFunctions;
-        },
-        // retrieve editor by name, largely used by testing suites only
-        retrieveEditor: function(name){
-            return editors[name];
-        },
-        unregisterEditor: function(name){
-            delete editors[name];
-            touchModification();
-        },
-        // registers a toolbar such that it can be linked to editors
-        registerToolbar: function(toolbarScope){
-            if(!toolbarScope) throw('textAngular Error: A toolbar requires a scope');
-            if(!toolbarScope.name || toolbarScope.name === '') throw('textAngular Error: A toolbar requires a name');
-            if(toolbars[toolbarScope.name]) throw('textAngular Error: A toolbar with name "' + toolbarScope.name + '" already exists');
-            toolbars[toolbarScope.name] = toolbarScope;
-            // walk all the editors and connect this toolbarScope to the editors.... if we need to.  This way, it does
-            // not matter if we register the editors after the toolbars or not
-            // Note the editor will ignore this toolbarScope if it is not connected to it...
-            angular.forEach(editors, function(_editor){
-                _editor._registerToolbarScope(toolbarScope);
-            });
-            touchModification();
-        },
-        // retrieve toolbar by name, largely used by testing suites only
-        retrieveToolbar: function(name){
-            return toolbars[name];
-        },
-        // retrieve toolbars by editor name, largely used by testing suites only
-        retrieveToolbarsViaEditor: function(name){
-            var result = [], _this = this;
-            angular.forEach(this.retrieveEditor(name).toolbars, function(name){
-                result.push(_this.retrieveToolbar(name));
-            });
-            return result;
-        },
-        unregisterToolbar: function(name){
-            delete toolbars[name];
-            touchModification();
-        },
-        // functions for updating the toolbar buttons display
-        updateToolsDisplay: function(newTaTools){
-            // pass a partial struct of the taTools, this allows us to update the tools on the fly, will not change the defaults.
-            var _this = this;
-            angular.forEach(newTaTools, function(_newTool, key){
-                _this.updateToolDisplay(key, _newTool);
-            });
-        },
-        // this function resets all toolbars to their default tool definitions
-        resetToolsDisplay: function(){
-            var _this = this;
-            angular.forEach(taTools, function(_newTool, key){
-                _this.resetToolDisplay(key);
-            });
-            touchModification();
-        },
-        // update a tool on all toolbars
-        updateToolDisplay: function(toolKey, _newTool){
-            var _this = this;
-            angular.forEach(toolbars, function(toolbarScope, toolbarKey){
-                _this.updateToolbarToolDisplay(toolbarKey, toolKey, _newTool);
-            });
-            touchModification();
-        },
-        // resets a tool to the default/starting state on all toolbars
-        resetToolDisplay: function(toolKey){
-            var _this = this;
-            angular.forEach(toolbars, function(toolbarScope, toolbarKey){
-                _this.resetToolbarToolDisplay(toolbarKey, toolKey);
-            });
-            touchModification();
-        },
-        // update a tool on a specific toolbar
-        updateToolbarToolDisplay: function(toolbarKey, toolKey, _newTool){
-            if(toolbars[toolbarKey]) toolbars[toolbarKey].updateToolDisplay(toolKey, _newTool);
-            else throw('textAngular Error: No Toolbar with name "' + toolbarKey + '" exists');
-        },
-        // reset a tool on a specific toolbar to it's default starting value
-        resetToolbarToolDisplay: function(toolbarKey, toolKey){
-            if(toolbars[toolbarKey]) toolbars[toolbarKey].updateToolDisplay(toolKey, taTools[toolKey], true);
-            else throw('textAngular Error: No Toolbar with name "' + toolbarKey + '" exists');
-        },
-        // removes a tool from all toolbars and it's definition
-        removeTool: function(toolKey){
-            delete taTools[toolKey];
-            angular.forEach(toolbars, function(toolbarScope){
-                delete toolbarScope.tools[toolKey];
-                for(var i = 0; i < toolbarScope.toolbar.length; i++){
-                    var toolbarIndex;
-                    for(var j = 0; j < toolbarScope.toolbar[i].length; j++){
-                        if(toolbarScope.toolbar[i][j] === toolKey){
-                            toolbarIndex = {
-                                group: i,
-                                index: j
+                        },
+                        triggerElementSelect: function (event, element) {
+                            // search through the taTools to see if a match for the tag is made.
+                            // if there is, see if the tool is on a registered toolbar and not disabled.
+                            // NOTE: This can trigger on MULTIPLE tools simultaneously.
+                            var elementHasAttrs = function (_element, attrs) {
+                                var result = true;
+                                for (var i = 0; i < attrs.length; i++) result = result && _element.attr(attrs[i]);
+                                return result;
                             };
-                            break;
+                            var workerTools = [];
+                            var unfilteredTools = {};
+                            var result = false;
+                            element = angular.element(element);
+                            // get all valid tools by element name, keep track if one matches the
+                            var onlyWithAttrsFilter = false;
+                            angular.forEach(taTools, function (tool, name) {
+                                if (
+                                    tool.onElementSelect &&
+                                    tool.onElementSelect.element &&
+                                    tool.onElementSelect.element.toLowerCase() === element[0].tagName.toLowerCase() &&
+                                    (!tool.onElementSelect.filter || tool.onElementSelect.filter(element))
+                                ) {
+                                    // this should only end up true if the element matches the only attributes
+                                    onlyWithAttrsFilter = onlyWithAttrsFilter ||
+                                        (angular.isArray(tool.onElementSelect.onlyWithAttrs) && elementHasAttrs(element, tool.onElementSelect.onlyWithAttrs));
+                                    if (!tool.onElementSelect.onlyWithAttrs || elementHasAttrs(element, tool.onElementSelect.onlyWithAttrs)) unfilteredTools[name] = tool;
+                                }
+                            });
+                            // if we matched attributes to filter on, then filter, else continue
+                            if (onlyWithAttrsFilter) {
+                                angular.forEach(unfilteredTools, function (tool, name) {
+                                    if (tool.onElementSelect.onlyWithAttrs && elementHasAttrs(element, tool.onElementSelect.onlyWithAttrs)) workerTools.push({ 'name': name, 'tool': tool });
+                                });
+                                // sort most specific (most attrs to find) first
+                                workerTools.sort(function (a, b) {
+                                    return b.tool.onElementSelect.onlyWithAttrs.length - a.tool.onElementSelect.onlyWithAttrs.length;
+                                });
+                            } else {
+                                angular.forEach(unfilteredTools, function (tool, name) {
+                                    workerTools.push({ 'name': name, 'tool': tool });
+                                });
+                            }
+                            // Run the actions on the first visible filtered tool only
+                            if (workerTools.length > 0) {
+                                for (var _i = 0; _i < workerTools.length; _i++) {
+                                    var tool = workerTools[_i].tool;
+                                    var name = workerTools[_i].name;
+                                    for (var _t = 0; _t < editors[editorName].toolbarScopes.length; _t++) {
+                                        if (editors[editorName].toolbarScopes[_t].tools[name] !== undefined) {
+                                            tool.onElementSelect.action.call(editors[editorName].toolbarScopes[_t].tools[name], event, element, editorScope);
+                                            result = true;
+                                            break;
+                                        }
+                                    }
+                                    if (result) break;
+                                }
+                            }
+                            return result;
                         }
-                        if(toolbarIndex !== undefined) break;
                     }
-                    if(toolbarIndex !== undefined){
-                        toolbarScope.toolbar[toolbarIndex.group].slice(toolbarIndex.index, 1);
-                        toolbarScope._$element.children().eq(toolbarIndex.group).children().eq(toolbarIndex.index).remove();
+                };
+                angular.forEach(targetToolbars, function (_name) {
+                    if (toolbars[_name]) {
+                        editors[editorName].toolbarScopes.push(toolbars[_name]);
                     }
+                    // if it doesn't exist it may not have been compiled yet and it will be added later
+                });
+                touchModification();
+                return editors[editorName].editorFunctions;
+            },
+            // retrieve editor by name, largely used by testing suites only
+            retrieveEditor: function (name) {
+                return editors[name];
+            },
+            unregisterEditor: function (name) {
+                delete editors[name];
+                touchModification();
+            },
+            // registers a toolbar such that it can be linked to editors
+            registerToolbar: function (toolbarScope) {
+                if (!toolbarScope) throw ('textAngular Error: A toolbar requires a scope');
+                if (!toolbarScope.name || toolbarScope.name === '') throw ('textAngular Error: A toolbar requires a name');
+                if (toolbars[toolbarScope.name]) throw ('textAngular Error: A toolbar with name "' + toolbarScope.name + '" already exists');
+                toolbars[toolbarScope.name] = toolbarScope;
+                // walk all the editors and connect this toolbarScope to the editors.... if we need to.  This way, it does
+                // not matter if we register the editors after the toolbars or not
+                // Note the editor will ignore this toolbarScope if it is not connected to it...
+                angular.forEach(editors, function (_editor) {
+                    _editor._registerToolbarScope(toolbarScope);
+                });
+                touchModification();
+            },
+            // retrieve toolbar by name, largely used by testing suites only
+            retrieveToolbar: function (name) {
+                return toolbars[name];
+            },
+            // retrieve toolbars by editor name, largely used by testing suites only
+            retrieveToolbarsViaEditor: function (name) {
+                var result = [], _this = this;
+                angular.forEach(this.retrieveEditor(name).toolbars, function (name) {
+                    result.push(_this.retrieveToolbar(name));
+                });
+                return result;
+            },
+            unregisterToolbar: function (name) {
+                delete toolbars[name];
+                touchModification();
+            },
+            // functions for updating the toolbar buttons display
+            updateToolsDisplay: function (newTaTools) {
+                // pass a partial struct of the taTools, this allows us to update the tools on the fly, will not change the defaults.
+                var _this = this;
+                angular.forEach(newTaTools, function (_newTool, key) {
+                    _this.updateToolDisplay(key, _newTool);
+                });
+            },
+            // this function resets all toolbars to their default tool definitions
+            resetToolsDisplay: function () {
+                var _this = this;
+                angular.forEach(taTools, function (_newTool, key) {
+                    _this.resetToolDisplay(key);
+                });
+                touchModification();
+            },
+            // update a tool on all toolbars
+            updateToolDisplay: function (toolKey, _newTool) {
+                var _this = this;
+                angular.forEach(toolbars, function (toolbarScope, toolbarKey) {
+                    _this.updateToolbarToolDisplay(toolbarKey, toolKey, _newTool);
+                });
+                touchModification();
+            },
+            // resets a tool to the default/starting state on all toolbars
+            resetToolDisplay: function (toolKey) {
+                var _this = this;
+                angular.forEach(toolbars, function (toolbarScope, toolbarKey) {
+                    _this.resetToolbarToolDisplay(toolbarKey, toolKey);
+                });
+                touchModification();
+            },
+            // update a tool on a specific toolbar
+            updateToolbarToolDisplay: function (toolbarKey, toolKey, _newTool) {
+                if (toolbars[toolbarKey]) toolbars[toolbarKey].updateToolDisplay(toolKey, _newTool);
+                else throw ('textAngular Error: No Toolbar with name "' + toolbarKey + '" exists');
+            },
+            // reset a tool on a specific toolbar to it's default starting value
+            resetToolbarToolDisplay: function (toolbarKey, toolKey) {
+                if (toolbars[toolbarKey]) toolbars[toolbarKey].updateToolDisplay(toolKey, taTools[toolKey], true);
+                else throw ('textAngular Error: No Toolbar with name "' + toolbarKey + '" exists');
+            },
+            // removes a tool from all toolbars and it's definition
+            removeTool: function (toolKey) {
+                delete taTools[toolKey];
+                angular.forEach(toolbars, function (toolbarScope) {
+                    delete toolbarScope.tools[toolKey];
+                    for (var i = 0; i < toolbarScope.toolbar.length; i++) {
+                        var toolbarIndex;
+                        for (var j = 0; j < toolbarScope.toolbar[i].length; j++) {
+                            if (toolbarScope.toolbar[i][j] === toolKey) {
+                                toolbarIndex = {
+                                    group: i,
+                                    index: j
+                                };
+                                break;
+                            }
+                            if (toolbarIndex !== undefined) break;
+                        }
+                        if (toolbarIndex !== undefined) {
+                            toolbarScope.toolbar[toolbarIndex.group].slice(toolbarIndex.index, 1);
+                            toolbarScope._$element.children().eq(toolbarIndex.group).children().eq(toolbarIndex.index).remove();
+                        }
+                    }
+                });
+                touchModification();
+            },
+            // toolkey, toolDefinition are required. If group is not specified will pick the last group, if index isnt defined will append to group
+            addTool: function (toolKey, toolDefinition, group, index) {
+                taRegisterTool(toolKey, toolDefinition);
+                angular.forEach(toolbars, function (toolbarScope) {
+                    toolbarScope.addTool(toolKey, toolDefinition, group, index);
+                });
+                touchModification();
+            },
+            // adds a Tool but only to one toolbar not all
+            addToolToToolbar: function (toolKey, toolDefinition, toolbarKey, group, index) {
+                taRegisterTool(toolKey, toolDefinition);
+                toolbars[toolbarKey].addTool(toolKey, toolDefinition, group, index);
+                touchModification();
+            },
+            // this is used when externally the html of an editor has been changed and textAngular needs to be notified to update the model.
+            // this will call a $digest if not already happening
+            refreshEditor: function (name) {
+                if (editors[name]) {
+                    editors[name].scope.updateTaBindtaTextElement();
+                    /* istanbul ignore else: phase catch */
+                    if (!editors[name].scope.$$phase) editors[name].scope.$digest();
+                } else throw ('textAngular Error: No Editor with name "' + name + '" exists');
+                touchModification();
+            },
+            // this is used by taBind to send a key command in response to a special key event
+            sendKeyCommand: function (scope, event) {
+                var _editor = editors[scope._name];
+                /* istanbul ignore else: if nothing to do, do nothing */
+                if (_editor && _editor.editorFunctions.sendKeyCommand(event)) {
+                    /* istanbul ignore else: don't run if already running */
+                    if (!scope._bUpdateSelectedStyles) {
+                        scope.updateSelectedStyles();
+                    }
+                    event.preventDefault();
+                    return false;
                 }
-            });
-            touchModification();
-        },
-        // toolkey, toolDefinition are required. If group is not specified will pick the last group, if index isnt defined will append to group
-        addTool: function(toolKey, toolDefinition, group, index){
-            taRegisterTool(toolKey, toolDefinition);
-            angular.forEach(toolbars, function(toolbarScope){
-                toolbarScope.addTool(toolKey, toolDefinition, group, index);
-            });
-            touchModification();
-        },
-        // adds a Tool but only to one toolbar not all
-        addToolToToolbar: function(toolKey, toolDefinition, toolbarKey, group, index){
-            taRegisterTool(toolKey, toolDefinition);
-            toolbars[toolbarKey].addTool(toolKey, toolDefinition, group, index);
-            touchModification();
-        },
-        // this is used when externally the html of an editor has been changed and textAngular needs to be notified to update the model.
-        // this will call a $digest if not already happening
-        refreshEditor: function(name){
-            if(editors[name]){
-                editors[name].scope.updateTaBindtaTextElement();
-                /* istanbul ignore else: phase catch */
-                if(!editors[name].scope.$$phase) editors[name].scope.$digest();
-            }else throw('textAngular Error: No Editor with name "' + name + '" exists');
-            touchModification();
-        },
-        // this is used by taBind to send a key command in response to a special key event
-        sendKeyCommand: function(scope, event){
-            var _editor = editors[scope._name];
-            /* istanbul ignore else: if nothing to do, do nothing */
-            if (_editor && _editor.editorFunctions.sendKeyCommand(event)) {
-                /* istanbul ignore else: don't run if already running */
-                if(!scope._bUpdateSelectedStyles){
-                    scope.updateSelectedStyles();
-                }
-                event.preventDefault();
-                return false;
+            },
+            //
+            // When a toolbar and tools are created, it isn't until there is a key event or mouse event
+            // that the updateSelectedStyles() is called behind the scenes.
+            // This function forces an update through the existing editors to help the application make sure
+            // the inital state is correct.
+            //
+            updateStyles: updateStyles,
+            // return the current version of textAngular in use to the user
+            getVersion: function () { return textAngularVersion; },
+            // for testing
+            getToolbarScopes: function () {
+                var tmp = [];
+                angular.forEach(editors, function (_editor) {
+                    tmp = tmp.concat(_editor.toolbarScopes);
+                });
+                return tmp;
             }
-        },
-        //
-        // When a toolbar and tools are created, it isn't until there is a key event or mouse event
-        // that the updateSelectedStyles() is called behind the scenes.
-        // This function forces an update through the existing editors to help the application make sure
-        // the inital state is correct.
-        //
-        updateStyles: updateStyles,
-        // return the current version of textAngular in use to the user
-        getVersion: function () { return textAngularVersion; },
-        // for testing
-        getToolbarScopes: function () {
-            var tmp=[];
-            angular.forEach(editors, function (_editor) {
-                tmp = tmp.concat(_editor.toolbarScopes);
-            });
-            return tmp;
-        }
-/********************** not functional yet
-        // save the selection ('range') for the given editor
-        saveFocusSelection: function (name, range) {
-            editors[name].savedFocusRange = range;
-        },
-        // restore the saved selection from when the focus was lost
-        restoreFocusSelection: function(name, scope) {
-            // we only do this if NOT focussed and saved...
-            if (editors[name].savedFocusRange && !scope.focussed) {
-                try {
-                    var _r = rangy.restoreRange(editors[name].savedFocusRange);
-                    var _sel = rangy.getSelection();
-                    _sel.addRange(_r);
-                } catch(e) {}
-            }
-        }
-*************/
-    };
-}]);
+            /********************** not functional yet
+                    // save the selection ('range') for the given editor
+                    saveFocusSelection: function (name, range) {
+                        editors[name].savedFocusRange = range;
+                    },
+                    // restore the saved selection from when the focus was lost
+                    restoreFocusSelection: function(name, scope) {
+                        // we only do this if NOT focussed and saved...
+                        if (editors[name].savedFocusRange && !scope.focussed) {
+                            try {
+                                var _r = rangy.restoreRange(editors[name].savedFocusRange);
+                                var _sel = rangy.getSelection();
+                                _sel.addRange(_r);
+                            } catch(e) {}
+                        }
+                    }
+            *************/
+        };
+    }]);
 textAngular.directive('textAngularToolbar', [
     '$compile', 'textAngularManager', 'taOptions', 'taTools', 'taToolExecuteAction', '$window',
-    function($compile, textAngularManager, taOptions, taTools, taToolExecuteAction, $window){
+    function ($compile, textAngularManager, taOptions, taTools, taToolExecuteAction, $window) {
         return {
             scope: {
                 name: '@' // a name IS required
             },
             restrict: "EA",
-            link: function(scope, element, attrs){
-                if(!scope.name || scope.name === '') throw('textAngular Error: A toolbar requires a name');
+            link: function (scope, element, attrs) {
+                if (!scope.name || scope.name === '') throw ('textAngular Error: A toolbar requires a name');
                 angular.extend(scope, angular.copy(taOptions));
-                if(attrs.taToolbar)						scope.toolbar = scope.$parent.$eval(attrs.taToolbar);
-                if(attrs.taToolbarClass)				scope.classes.toolbar = attrs.taToolbarClass;
-                if(attrs.taToolbarGroupClass)			scope.classes.toolbarGroup = attrs.taToolbarGroupClass;
-                if(attrs.taToolbarButtonClass)			scope.classes.toolbarButton = attrs.taToolbarButtonClass;
-                if(attrs.taToolbarActiveButtonClass)	scope.classes.toolbarButtonActive = attrs.taToolbarActiveButtonClass;
-                if(attrs.taFocussedClass)				scope.classes.focussed = attrs.taFocussedClass;
+                if (attrs.taToolbar) scope.toolbar = scope.$parent.$eval(attrs.taToolbar);
+                if (attrs.taToolbarClass) scope.classes.toolbar = attrs.taToolbarClass;
+                if (attrs.taToolbarGroupClass) scope.classes.toolbarGroup = attrs.taToolbarGroupClass;
+                if (attrs.taToolbarButtonClass) scope.classes.toolbarButton = attrs.taToolbarButtonClass;
+                if (attrs.taToolbarActiveButtonClass) scope.classes.toolbarButtonActive = attrs.taToolbarActiveButtonClass;
+                if (attrs.taFocussedClass) scope.classes.focussed = attrs.taFocussedClass;
 
                 scope.disabled = true;
                 scope.focussed = false;
@@ -5139,44 +5385,46 @@ textAngular.directive('textAngularToolbar', [
                 element[0].innerHTML = '';
                 element.addClass("ta-toolbar " + scope.classes.toolbar);
 
-                scope.$watch('focussed', function(){
-                    if(scope.focussed) element.addClass(scope.classes.focussed);
+                scope.$watch('focussed', function () {
+                    if (scope.focussed) element.addClass(scope.classes.focussed);
                     else element.removeClass(scope.classes.focussed);
                 });
 
-                var setupToolElement = function(toolDefinition, toolScope){
+                var setupToolElement = function (toolDefinition, toolScope) {
                     var toolElement;
-                    if(toolDefinition && toolDefinition.display){
+                    if (toolDefinition && toolDefinition.display) {
                         toolElement = angular.element(toolDefinition.display);
                     }
                     else toolElement = angular.element("<button type='button'>");
 
-                    if(toolDefinition && toolDefinition["class"]) toolElement.addClass(toolDefinition["class"]);
+                    if (toolDefinition && toolDefinition["class"]) toolElement.addClass(toolDefinition["class"]);
                     else toolElement.addClass(scope.classes.toolbarButton);
 
                     toolElement.attr('name', toolScope.name);
+                    toolElement.attr('aria-label', toolScope.name);
+                    toolElement.attr('role', 'button');
                     // important to not take focus from the main text/html entry
                     toolElement.attr('ta-button', 'ta-button');
                     toolElement.attr('ng-disabled', 'isDisabled()');
-                    toolElement.attr('tabindex', '-1');
+                    toolElement.attr('tabindex', '{{ tabbingAllowed() ? 0 : -1}}');
                     toolElement.attr('ng-click', 'executeAction()');
                     toolElement.attr('ng-class', 'displayActiveToolClass(active)');
 
                     if (toolDefinition && toolDefinition.tooltiptext) {
                         toolElement.attr('title', toolDefinition.tooltiptext);
                     }
-                    if(toolDefinition && !toolDefinition.display && !toolScope._display){
+                    if (toolDefinition && !toolDefinition.display && !toolScope._display) {
                         // first clear out the current contents if any
                         toolElement[0].innerHTML = '';
                         // add the buttonText
-                        if(toolDefinition.buttontext) toolElement[0].innerHTML = toolDefinition.buttontext;
+                        if (toolDefinition.buttontext) toolElement[0].innerHTML = toolDefinition.buttontext;
                         // add the icon to the front of the button if there is content
-                        if(toolDefinition.iconclass){
+                        if (toolDefinition.iconclass) {
                             var icon = angular.element('<i>'), content = toolElement[0].innerHTML;
                             icon.addClass(toolDefinition.iconclass);
                             toolElement[0].innerHTML = '';
                             toolElement.append(icon);
-                            if(content && content !== '') toolElement.append('&nbsp;' + content);
+                            if (content && content !== '') toolElement.append('&nbsp;' + content);
                         }
                     }
 
@@ -5192,16 +5440,16 @@ textAngular.directive('textAngularToolbar', [
                 scope._parent = {
                     disabled: true,
                     showHtml: false,
-                    queryFormatBlockState: function(){ return false; },
-                    queryCommandState: function(){ return false; }
+                    queryFormatBlockState: function () { return false; },
+                    queryCommandState: function () { return false; }
                 };
                 var defaultChildScope = {
                     $window: $window,
-                    $editor: function(){
+                    $editor: function () {
                         // dynamically gets the editor as it is set
                         return scope._parent;
                     },
-                    isDisabled: function(){
+                    isDisabled: function () {
                         // view selection button is always enabled since it doesn not depend on a selction!
                         if (this.name === 'html' && scope._parent.startAction) {
                             return false;
@@ -5218,22 +5466,25 @@ textAngular.directive('textAngularToolbar', [
                             this.$editor().disabled
                         );
                     },
-                    displayActiveToolClass: function(active){
-                        return (active)? scope.classes.toolbarButtonActive : '';
+                    tabbingAllowed: function () {
+                        return textAngularManager.toolbarFocussed;
+                    },
+                    displayActiveToolClass: function (active) {
+                        return (active) ? scope.classes.toolbarButtonActive : '';
                     },
                     executeAction: taToolExecuteAction
                 };
 
-                angular.forEach(scope.toolbar, function(group){
+                angular.forEach(scope.toolbar, function (group) {
                     // setup the toolbar group
                     var groupElement = angular.element("<div>");
                     groupElement.addClass(scope.classes.toolbarGroup);
-                    angular.forEach(group, function(tool){
+                    angular.forEach(group, function (tool) {
                         // init and add the tools to the group
                         // a tool name (key name from taTools struct)
                         //creates a child scope of the main angularText scope and then extends the childScope with the functions of this particular tool
                         // reference to the scope and element kept
-                        scope.tools[tool] = angular.extend(scope.$new(true), taTools[tool], defaultChildScope, {name: tool});
+                        scope.tools[tool] = angular.extend(scope.$new(true), taTools[tool], defaultChildScope, { name: tool });
                         scope.tools[tool].$element = setupToolElement(taTools[tool], scope.tools[tool]);
                         // append the tool compiled with the childScope to the group element
                         groupElement.append(scope.tools[tool].$element);
@@ -5246,22 +5497,22 @@ textAngular.directive('textAngularToolbar', [
                 // if a value is set to null, remove from the display
                 // when forceNew is set to true it will ignore all previous settings, used to reset to taTools definition
                 // to reset to defaults pass in taTools[key] as _newTool and forceNew as true, ie `updateToolDisplay(key, taTools[key], true);`
-                scope.updateToolDisplay = function(key, _newTool, forceNew){
+                scope.updateToolDisplay = function (key, _newTool, forceNew) {
                     var toolInstance = scope.tools[key];
-                    if(toolInstance){
+                    if (toolInstance) {
                         // get the last toolDefinition, then override with the new definition
-                        if(toolInstance._lastToolDefinition && !forceNew) _newTool = angular.extend({}, toolInstance._lastToolDefinition, _newTool);
-                        if(_newTool.buttontext === null && _newTool.iconclass === null && _newTool.display === null)
-                            throw('textAngular Error: Tool Definition for updating "' + key + '" does not have a valid display/iconclass/buttontext value');
+                        if (toolInstance._lastToolDefinition && !forceNew) _newTool = angular.extend({}, toolInstance._lastToolDefinition, _newTool);
+                        if (_newTool.buttontext === null && _newTool.iconclass === null && _newTool.display === null)
+                            throw ('textAngular Error: Tool Definition for updating "' + key + '" does not have a valid display/iconclass/buttontext value');
 
                         // if tool is defined on this toolbar, update/redo the tool
-                        if(_newTool.buttontext === null){
+                        if (_newTool.buttontext === null) {
                             delete _newTool.buttontext;
                         }
-                        if(_newTool.iconclass === null){
+                        if (_newTool.iconclass === null) {
                             delete _newTool.iconclass;
                         }
-                        if(_newTool.display === null){
+                        if (_newTool.display === null) {
                             delete _newTool.display;
                         }
 
@@ -5272,17 +5523,17 @@ textAngular.directive('textAngularToolbar', [
                 };
 
                 // we assume here that all values passed are valid and correct
-                scope.addTool = function(key, _newTool, groupIndex, index){
-                    scope.tools[key] = angular.extend(scope.$new(true), taTools[key], defaultChildScope, {name: key});
+                scope.addTool = function (key, _newTool, groupIndex, index) {
+                    scope.tools[key] = angular.extend(scope.$new(true), taTools[key], defaultChildScope, { name: key });
                     scope.tools[key].$element = setupToolElement(taTools[key], scope.tools[key]);
                     var group;
-                    if(groupIndex === undefined) groupIndex = scope.toolbar.length - 1;
+                    if (groupIndex === undefined) groupIndex = scope.toolbar.length - 1;
                     group = angular.element(element.children()[groupIndex]);
 
-                    if(index === undefined){
+                    if (index === undefined) {
                         group.append(scope.tools[key].$element);
                         scope.toolbar[groupIndex][scope.toolbar[groupIndex].length - 1] = key;
-                    }else{
+                    } else {
                         group.children().eq(index).after(scope.tools[key].$element);
                         scope.toolbar[groupIndex][index] = key;
                     }
@@ -5290,15 +5541,57 @@ textAngular.directive('textAngularToolbar', [
 
                 textAngularManager.registerToolbar(scope);
 
-                scope.$on('$destroy', function(){
+                scope.$on('$destroy', function () {
                     textAngularManager.unregisterToolbar(scope.name);
                 });
+
+                var _keydown = function (event) {
+
+                    var buttonsList = $(':button');
+                    var focussedButton = $(':focus');
+
+                    // When escape is hit on the toolbar, return focus to the editor section
+                    if (event.keyCode === 27) {
+                        var editor = $('#' + textAngularManager.editorId);
+                        if (editor !== null && editor !== undefined)
+                            editor.focus();
+                    }
+
+                    // Left Arrow
+                    else if (event.keyCode === 37) {
+                        event.preventDefault();
+                        // Get the previous button and focus on it
+                        var prevButton = buttonsList.get(buttonsList.index(focussedButton) - 1);
+                        if (prevButton) {
+                            prevButton.focus();
+                        }
+                    }
+
+                    // Right Arrow
+                    else if (event.keyCode === 39) {
+                        event.preventDefault();
+                        // Get the next button and focus on it. if this is last, then jump to the first button again
+                        var nextButton = buttonsList.get(buttonsList.index(focussedButton) + 1);
+                        if (nextButton) {
+                            nextButton.focus();
+                        }
+                        else {
+                            buttonsList[0].focus();
+                        }
+                    }
+
+                    // Mark the toolbarFocussed flag as false on any other keystroke except tab
+                    else if (event.keyCode !== 9)
+                        textAngularManager.toolbarFocussed = false;
+
+                };
+                scope._$element.on('keydown', _keydown);
             }
         };
     }
 ]);
 textAngular.directive('textAngularVersion', ['textAngularManager',
-    function(textAngularManager) {
+    function (textAngularManager) {
         var version = textAngularManager.getVersion();
         return {
             restrict: "EA",

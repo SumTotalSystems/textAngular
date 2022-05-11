@@ -26,7 +26,7 @@ module.exports = function (grunt) {
 	grunt.registerTask('release:minor', ['bump-only:minor','setVersion','compile','demo_pages','conventionalChangelog','shell:changelog','gitcommit','bump-commit', 'shell:publish']);
 	grunt.registerTask('release:major', ['bump-only:major','setVersion','compile','demo_pages','conventionalChangelog','shell:changelog','gitcommit','bump-commit', 'shell:publish']);
 	grunt.registerTask('release:prerelease', ['bump-only:prerelease','setVersion','demo_pages','compile','conventionalChangelog','shell:changelog','gitcommit','bump-commit', 'shell:publish']);
-	
+
 	grunt.registerTask('setVersion', function () {
 		var pkgJson = require('./package.json');
 		var version = pkgJson.version;
@@ -133,10 +133,10 @@ module.exports = function (grunt) {
 		coverage: {
 			options: {
 				thresholds: {
-					'statements': 100,
-					'branches': 100,
-					'lines': 100,
-					'functions': 100
+					'statements': 94,
+					'branches': 94,
+					'lines': 94,
+					'functions': 94
 				},
 			dir: 'coverage'
 			}
